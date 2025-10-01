@@ -122,7 +122,27 @@ jobs:
         ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
         USE_CCACHE: 1
         NDK_CCACHE: ccache
-    
+
+    - name: Dump Buildozer logs
+      if: failure()
+      run: |
+        echo "=== Available log files ==="
+        find .buildozer -maxdepth 4 -type f -name "*.log" -print || true
+        echo "=== build.log (last 200 lines) ==="
+        tail -n 200 .buildozer/android/platform/build-arm64-v8a/build.log || true
+        echo "=== python-for-android.log (last 200 lines) ==="
+        tail -n 200 .buildozer/android/platform/build-arm64-v8a/logs/python-for-android.log || true
+
+    - name: Upload build logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: buildozer-logs
+        path: |
+          .buildozer/android/platform/build-arm64-v8a/build.log
+          .buildozer/android/platform/build-arm64-v8a/logs/
+        retention-days: 7
+
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
