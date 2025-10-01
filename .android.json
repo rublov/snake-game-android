@@ -1,0 +1,15 @@
+{
+    "package": "com.snakegame.pygame",
+    "name": "Snake Game",
+    "version": "1.0",
+    "numeric_version": 1,
+    "orientation": "portrait",
+    "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"],
+    "include_pil": true,
+    "include_sqlite": false,
+    "layout": null,
+    "icon": "icon.png",
+    "presplash": "splash.png",
+    "ouya_category": null,
+    "ouya_icon": null
+}

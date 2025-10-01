@@ -1,26 +1,115 @@
 # Snake Eater
+
 A snake game written in Python using the Pygame library.
 
+## Features
+
+- Classic Snake gameplay
+- Two modes: MAP (premium with obstacles) and MVP (free without obstacles)
+- Themes: Light and Dark
+- Sound effects and background music
+- Settings persistence
+- Promo codes for extending MAP mode
+- Time tracking during gameplay
+- Visual mode indicator on screen
+
+## Modes
+
+### MAP Mode (Premium)
+
+- Includes obstacles (walls) for increased difficulty
+- Activated via promo codes (e.g., "MAP30" for 30 minutes,
+  "qwerty5" for 5 minutes, "qwerty10" for 10 minutes, etc.)
+- Sound and music enabled
+- Theme can be changed
+
+### MVP Mode (Free)
+
+- No obstacles, simpler gameplay
+- Activated by default, no time limit
+- Sound and music disabled
+- Theme always black (forced)
 
 ## Installing
-Download the Python 3 installer package from the official website and install it, if not installed previously.
 
-Run the following in the terminal to install the Pygame library
-```
-pip3 install pygame
-```
+Download the Python 3 installer package from the official website
+and install it, if not installed previously.
 
+Run the following in the terminal to install the required dependencies
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Running the application
-Download the source code from the repository and run the file just as any other Python script (.py) file.
-```
+
+Download the source code from the repository and run the file
+just as any other Python script (.py) file.
+
+```bash
 python3 Snake\ Game.py
 ```
 
-The `difficulty` variable can be changed with the values provided in the comment to set the difficulty level.
+The `difficulty` variable can be changed with the values provided
+in the comment to set the difficulty level.
 
-The rest of the code is properly commented and self explanatory. Tweaks can be made to change the play style or visuals of the game.
+## Testing
 
+### Visual Testing
+
+The project includes a visual testing script (`visual_test.py`)
+for detecting visual regressions in the game UI.
+
+To run visual tests:
+
+1. Start the game: `python "Snake Game.py"`
+2. In another terminal, run: `python visual_test.py`
+
+This will capture a screenshot and compare it with a baseline image.
+If no baseline exists, it will create one.
+
+### Security Testing
+
+- Run `bandit "Snake Game.py"` for static security analysis.
+- Run `safety check --file requirements.txt` for dependency
+  vulnerability checks.
+
+## Changes for MVP/MAP Modes Implementation
+
+To achieve the task of implementing two modes (MVP and MAP),
+the following changes were made:
+
+1. **Mode Variables**: Added `mode` variable ('map' or 'mvp')
+   and `map_end_time` for timer management.
+2. **First Launch Tracking**: Introduced `first_launch_time` to set
+   a global 15-minute limit for MAP mode from the first app launch.
+3. **Settings Persistence**: Updated `save_settings()` and `load_settings()`
+   to store mode, timers, and first launch time.
+4. **Theme Control**: Modified `update_colors()` to force black theme
+   in MVP mode regardless of user setting.
+5. **Sound Control**: Disabled sound in MVP mode by setting
+   `sound_enabled = False` when mode is 'mvp'.
+6. **Level Loading**: Updated `load_level()` to load walls only
+   in MAP mode.
+7. **Promo Codes**: Added promo code system with 'MAP30' and various
+   'qwerty' codes (qwerty5, qwerty10, qwerty15, qwerty20) to extend MAP time.
+8. **UI Notifications**: Added notification when switching
+   from MAP to MVP.
+9. **Timer Security**: Made MAP timer global to prevent abuse
+   by closing/reopening the app.
+10. **Time Display**: Added elapsed time counter in the top-right
+    corner during gameplay.
+11. **Mode Indicator**: Added visual indicator showing current mode
+    (e.g., "Премиум15" for activated promo code duration, or "Классика")
+    in the top-left corner during gameplay and pause, and in the start menu.
+12. **Game Over Behavior**: Modified game_over() to not quit the application,
+    allowing players to restart or return to menu without relaunching.
+
+These changes ensure fair monetization with a free MVP mode
+and a time-limited premium MAP mode.
+
+The rest of the code is properly commented and self explanatory.
+Tweaks can be made to change the play style or visuals of the game.
 
 ## Screenshots
 
@@ -33,18 +122,28 @@ The rest of the code is properly commented and self explanatory. Tweaks can be m
 ![3](https://user-images.githubusercontent.com/32998741/33873440-28647360-df45-11e7-8291-b82d5646352f.png)
 *Game over screen*
 
-
 ## Prerequisites
-* [Python](https://www.python.org)
-* [Pygame](https://www.pygame.org/wiki/GettingStarted), an open source Python library for making multimedia applications
 
+- [Python](https://www.python.org)
+- [Pygame](https://www.pygame.org/wiki/GettingStarted),
+  an open source Python library for making multimedia applications
 
 ## Authors
 
-* **Rajat Dipta Biswas** - *Initial work*
+- **Rajat Dipta Biswas** - *Initial work*
 
-See also the list of [contributors](https://github.com/rajatdiptabiswas/snake-pygame/graphs/contributors) who participated in this project.
+See also the list of
+[contributors](https://github.com/rajatdiptabiswas/snake-pygame/graphs/contributors)
+who participated in this project.
+
+## Dependency Management
+
+This project uses [Dependabot](https://dependabot.com/) for automated
+dependency updates. Dependabot automatically creates pull requests
+to update dependencies to their latest versions, helping to keep
+the project secure and up-to-date.
 
 ## Acknowledgements
-* [Pygame Documentations](https://www.pygame.org/docs/)
-* [Udemy: Python Game Development](https://www.udemy.com/python-game-development-creating-a-snake-game-from-scratch/learn/v4/overview)
+
+- [Pygame Documentations](https://www.pygame.org/docs/)
+- [Udemy: Python Game Development](<https://www.udemy.com/python-game-development-creating-a-snake-game-from-scratch/learn/v4/overview>)
