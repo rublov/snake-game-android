@@ -73,6 +73,7 @@ jobs:
     
     - name: Setup Android SDK
       run: |
+        set -e
         mkdir -p ~/.buildozer/android/platform/android-sdk
         cd ~/.buildozer/android/platform
         
@@ -83,8 +84,8 @@ jobs:
         mv cmdline-tools android-sdk/cmdline-tools/latest
         
         # Set up environment
-        export ANDROID_HOME=~/.buildozer/android/platform/android-sdk
-        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+        export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
         
         # Accept licenses
         mkdir -p android-sdk/licenses
@@ -94,6 +95,14 @@ jobs:
         
         # Install required SDK components
         yes | sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-31" "build-tools;34.0.0"
+        
+        # Create legacy tools structure for buildozer compatibility
+        mkdir -p android-sdk/tools/bin
+        ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager android-sdk/tools/bin/sdkmanager
+        ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager android-sdk/tools/bin/avdmanager
+        
+        echo "Android SDK setup completed"
+        ls -la android-sdk/tools/bin/ || true
     
     - name: Build APK with Buildozer
       run: |
