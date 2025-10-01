@@ -1,0 +1,4 @@
+name = "Snake Game"
+description = "Classic Snake Game with modern features"
+version = "1.0.0"
+requirements = ["pygame>=2.1.0"]
