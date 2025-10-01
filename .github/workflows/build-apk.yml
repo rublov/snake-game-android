@@ -42,6 +42,8 @@ jobs:
         sudo apt-get install -y zlib1g-dev libncurses-dev libncursesw5-dev
         sudo apt-get install -y cmake libffi-dev libssl-dev
         sudo apt-get install -y build-essential ccache libltdl-dev
+        sudo apt-get install -y libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev
+        sudo apt-get install -y libfreetype6-dev libpng-dev libjpeg-dev
     
     - name: Cache Buildozer global directory
       uses: actions/cache@v3
@@ -106,12 +108,20 @@ jobs:
     
     - name: Build APK with Buildozer
       run: |
+        # Configure ccache
+        export CCACHE_DIR=$HOME/.ccache
+        export USE_CCACHE=1
+        ccache -M 2G
+        
+        # Build
         buildozer -v android debug
       timeout-minutes: 60
       env:
         BUILDOZER_WARN_ON_ROOT: 0
         ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
         ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
+        USE_CCACHE: 1
+        NDK_CCACHE: ccache
     
     - name: Upload APK
       uses: actions/upload-artifact@v4

@@ -20,7 +20,10 @@ version = 1.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,pygame
+requirements = python3,pygame==2.6.1,setuptools
+
+# (list) Recipe dependencies (p4a recipes)
+p4a.branch = master
 
 # (str) Presplash of the application
 presplash.filename = %(source.dir)s/splash.png
