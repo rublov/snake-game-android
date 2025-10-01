@@ -24,7 +24,10 @@ sys.path.insert(0, os.path.dirname(__file__))
 # Определяем, работаем ли на Android
 ANDROID = False
 try:
-    import android
+    # Пробуем импортировать android модуль
+    # Питон-линтер показывает ошибку, но на андроиде он доступен
+    # Поэтому приглушаем ошибку импорта следующей строкой
+    import android  # noqa: F401
     ANDROID = True
     logging.info("Запуск на платформе Android")
 except ImportError:
@@ -50,9 +53,13 @@ if __name__ == '__main__':
             import importlib.util
             
             snake_file = "Snake Game.py"
-            spec = importlib.util.spec_from_file_location("snake_game", snake_file)
+            spec = importlib.util.spec_from_file_location(
+                "snake_game", snake_file
+            )
             snake_game = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(snake_game)
         except Exception as backup_error:
-            logging.error(f"Не удалось запустить оригинальную игру: {backup_error}")
+            logging.error(
+                f"Не удалось запустить оригинальную игру: {backup_error}"
+            )
             traceback.print_exc()
