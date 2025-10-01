@@ -42,11 +42,21 @@ jobs:
         sudo apt-get install -y zlib1g-dev libncurses-dev libncursesw5-dev
         sudo apt-get install -y cmake libffi-dev libssl-dev
         sudo apt-get install -y build-essential ccache libltdl-dev
+        
+        # Kivy and graphics dependencies
         sudo apt-get install -y libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev
         sudo apt-get install -y libfreetype6-dev libpng-dev libjpeg-dev
         sudo apt-get install -y libgles2-mesa-dev libgstreamer1.0-dev
         sudo apt-get install -y libsdl2-2.0-0 libsdl2-dev libsdl2-image-dev
         sudo apt-get install -y libsdl2-mixer-dev libsdl2-ttf-dev
+        
+        # Additional dependencies for various Kivy components
+        sudo apt-get install -y libmtdev-dev libxsel-dev xclip xsel
+        sudo apt-get install -y libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev
+        sudo apt-get install -y libmikmod-dev libsmpeg-dev
+        
+        # SVG dependencies (if needed)
+        sudo apt-get install -y librsvg2-dev libxml2-dev libcairo2-dev
     
     - name: Cache Buildozer global directory
       uses: actions/cache@v3
@@ -64,8 +74,18 @@ jobs:
       run: |
         pip install --upgrade pip setuptools wheel
         pip install buildozer==1.5.0
-        pip install cython==0.29.36
+        pip install cython==0.29.33  # Changed to more stable version
         pip install virtualenv
+        
+        # Verify package versions
+        echo "Python version:"
+        python --version
+        echo "Pip version:"
+        pip --version
+        echo "Buildozer version:"
+        buildozer --version
+        echo "Cython version:"
+        python -c "import cython; print(cython.__version__)"
     
     - name: Verify buildozer.spec exists
       run: |
@@ -130,6 +150,17 @@ jobs:
         echo "Buildozer configuration:"
         cat buildozer.spec
         
+        # Install dependencies
+        pip install --upgrade pip setuptools wheel
+        pip install Cython==0.29.33  # Specific version for better compatibility
+        
+        # Set environment variables to control build
+        export KIVY_NO_SVG=1  # Disable SVG support
+        export KIVY_NO_CONSOLELOG=0  # Enable console logging
+        export KIVY_NO_CONFIG=1  # Disable config
+        export KIVY_BUILD_DEPENDENCIES=0  # Use system dependencies
+        export BUILDOZER_ALLOW_LEGACY_INTERNAL_STYLE=1
+        
         # Build
         buildozer -v android debug
       timeout-minutes: 60
@@ -165,6 +196,20 @@ jobs:
           echo "=== Recent compiler errors (grep -i error) ==="
           grep -RIn "error:" "$BASE/obj" | tail -n 40 || true
         fi
+        
+        # Additional debug information for Kivy
+        echo "=== Checking Kivy recipe ==="
+        if [ -d ".buildozer/android/platform/build-arm64-v8a/packages/kivy" ]; then
+          ls -la ".buildozer/android/platform/build-arm64-v8a/packages/kivy"
+          cat ".buildozer/android/platform/build-arm64-v8a/packages/kivy/setup.py" || echo "No setup.py found"
+          grep -r "svg" ".buildozer/android/platform/build-arm64-v8a/packages/kivy" || echo "No svg reference found"
+        fi
+        
+        echo "=== System environment ==="
+        env | sort
+        
+        echo "=== Python packages ==="
+        pip freeze
 
     - name: Upload build logs
       if: failure()

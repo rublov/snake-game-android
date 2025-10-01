@@ -20,7 +20,7 @@ version = 1.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,pygame_sdl2,pyjnius
+requirements = python3,kivy==2.2.1,pyjnius
 
 # (list) Garden requirements
 garden_requirements = 
@@ -66,6 +66,23 @@ android.copy_libs = 1
 
 # (str) The Android arch to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
 android.archs = arm64-v8a
+
+# (str) Custom source folders for requirements
+# Sets custom source for any requirements with recipes
+# requirements.source.kivy = ../../kivy
+
+# (list) Kivy Garden modules to include
+garden_requirements = 
+
+# (str) Kivy options
+kivy.require = 2.2.1
+kivy.skip_gl_redirect = 0
+kivy.no_config = 1
+kivy.no_use_deprecation = 1
+
+# Kivy build options
+# disable svg module
+kivy.graphics.svg = 0
 
 [buildozer]
 
