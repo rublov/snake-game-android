@@ -20,7 +20,7 @@ version = 1.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,pygame==2.6.1,setuptools
+requirements = python3,pygame==2.1.0
 
 # (list) Recipe dependencies (p4a recipes)
 p4a.branch = master
