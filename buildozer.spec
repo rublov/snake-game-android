@@ -20,7 +20,7 @@ version = 1.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,pygame==2.1.0
+requirements = python3,pygame
 
 # (str) Presplash of the application
 presplash.filename = %(source.dir)s/splash.png
@@ -56,7 +56,7 @@ android.logcat_filters = *:S python:D
 android.copy_libs = 1
 
 # (str) The Android arch to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
-android.archs = arm64-v8a,armeabi-v7a
+android.archs = arm64-v8a
 
 [buildozer]
 
