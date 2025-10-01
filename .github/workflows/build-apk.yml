@@ -44,6 +44,9 @@ jobs:
         sudo apt-get install -y build-essential ccache libltdl-dev
         sudo apt-get install -y libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev
         sudo apt-get install -y libfreetype6-dev libpng-dev libjpeg-dev
+        sudo apt-get install -y libgles2-mesa-dev libgstreamer1.0-dev
+        sudo apt-get install -y libsdl2-2.0-0 libsdl2-dev libsdl2-image-dev
+        sudo apt-get install -y libsdl2-mixer-dev libsdl2-ttf-dev
     
     - name: Cache Buildozer global directory
       uses: actions/cache@v3
@@ -106,12 +109,26 @@ jobs:
         echo "Android SDK setup completed"
         ls -la android-sdk/tools/bin/ || true
     
+    - name: Check SDL2 libraries
+      run: |
+        echo "Checking SDL2 libraries..."
+        ldconfig -p | grep -i sdl2
+        pkg-config --libs sdl2
+        
+        echo "Checking system package directories..."
+        ls -la /usr/lib/x86_64-linux-gnu/libSDL2* || true
+        ls -la /usr/include/SDL2/ || true
+    
     - name: Build APK with Buildozer
       run: |
         # Configure ccache
         export CCACHE_DIR=$HOME/.ccache
         export USE_CCACHE=1
         ccache -M 2G
+        
+        # Print buildozer config
+        echo "Buildozer configuration:"
+        cat buildozer.spec
         
         # Build
         buildozer -v android debug

@@ -20,7 +20,7 @@ version = 1.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,pygame==2.1.0,pyjnius
+requirements = python3,kivy,pygame_sdl2,pyjnius
 
 # (list) Garden requirements
 garden_requirements = 
