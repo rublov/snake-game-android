@@ -51,9 +51,12 @@ jobs:
         sudo apt-get install -y libsdl2-mixer-dev libsdl2-ttf-dev
         
         # Additional dependencies for various Kivy components
-        sudo apt-get install -y libmtdev-dev libxsel-dev xclip xsel
+        sudo apt-get install -y libmtdev-dev xclip xsel
         sudo apt-get install -y libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev
         sudo apt-get install -y libmikmod-dev libsmpeg-dev
+        
+        # X11 and input dependencies for Kivy
+        sudo apt-get install -y libx11-dev libxcursor-dev libxinerama-dev libxi-dev
         
         # SVG dependencies (if needed)
         sudo apt-get install -y librsvg2-dev libxml2-dev libcairo2-dev
