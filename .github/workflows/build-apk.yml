@@ -126,12 +126,28 @@ jobs:
     - name: Dump Buildozer logs
       if: failure()
       run: |
+        set +e
+        BASE=.buildozer/android/platform/build-arm64-v8a
         echo "=== Available log files ==="
-        find .buildozer -maxdepth 4 -type f -name "*.log" -print || true
-        echo "=== build.log (last 200 lines) ==="
-        tail -n 200 .buildozer/android/platform/build-arm64-v8a/build.log || true
-        echo "=== python-for-android.log (last 200 lines) ==="
-        tail -n 200 .buildozer/android/platform/build-arm64-v8a/logs/python-for-android.log || true
+        find .buildozer -maxdepth 5 -type f -name "*.log" -print || true
+        if [ -f "$BASE/build.log" ]; then
+          echo "=== build.log (last 400 lines) ==="
+          tail -n 400 "$BASE/build.log"
+        else
+          echo "build.log not found"
+        fi
+        if [ -f "$BASE/logs/python-for-android.log" ]; then
+          echo "=== python-for-android.log (last 400 lines) ==="
+          tail -n 400 "$BASE/logs/python-for-android.log"
+        fi
+        if [ -f "$BASE/logs/hostpython.log" ]; then
+          echo "=== hostpython.log (last 200 lines) ==="
+          tail -n 200 "$BASE/logs/hostpython.log"
+        fi
+        if [ -d "$BASE/obj" ]; then
+          echo "=== Recent compiler errors (grep -i error) ==="
+          grep -RIn "error:" "$BASE/obj" | tail -n 40 || true
+        fi
 
     - name: Upload build logs
       if: failure()
@@ -141,6 +157,14 @@ jobs:
         path: |
           .buildozer/android/platform/build-arm64-v8a/build.log
           .buildozer/android/platform/build-arm64-v8a/logs/
+        retention-days: 7
+
+    - name: Upload build workspace
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: buildozer-workdir
+        path: .buildozer/android/platform/build-arm64-v8a/
         retention-days: 7
 
     - name: Upload APK
