@@ -46,6 +46,9 @@ android.minapi = 21
 # (str) Android NDK version to use
 android.ndk = 25b
 
+# (str) Android SDK Build-tools version to use
+android.build_tools_version = 34.0.0
+
 # (bool) Use --private data storage (True) or --dir public storage (False)
 android.private_storage = True
 

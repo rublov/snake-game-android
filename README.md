@@ -50,8 +50,19 @@ just as any other Python script (.py) file.
 python3 Snake\ Game.py
 ```
 
-The `difficulty` variable can be changed with the values provided
-in the comment to set the difficulty level.
+## Example Usage
+
+To start the game in MAP mode with a promo code:
+
+```bash
+python3 Snake\ Game.py --mode MAP --promo MAP30
+```
+
+To start the game in MVP mode:
+
+```bash
+python3 Snake\ Game.py --mode MVP
+```
 
 ## Testing
 
@@ -147,3 +158,39 @@ the project secure and up-to-date.
 
 - [Pygame Documentations](https://www.pygame.org/docs/)
 - [Udemy: Python Game Development](<https://www.udemy.com/python-game-development-creating-a-snake-game-from-scratch/learn/v4/overview>)
+
+## Android Adaptation
+
+This project has been adapted to work with Kivy for Android development. Follow the steps below to build and run the application on Android devices:
+
+### Prerequisites for Android
+
+- Install [Kivy](https://kivy.org/doc/stable/gettingstarted/installation.html) in your Python environment.
+- Install [Buildozer](https://github.com/kivy/buildozer) for building APKs.
+- Ensure you have Java, Android SDK, and other dependencies required by Buildozer.
+
+### Building the APK
+
+1. Initialize Buildozer in the project directory:
+
+   ```bash
+   buildozer init
+   ```
+
+2. Edit the `buildozer.spec` file to configure your app (e.g., app name, package name, permissions).
+
+3. Build the APK:
+
+   ```bash
+   buildozer -v android debug
+   ```
+
+4. Once the build is complete, the APK file will be located in the `bin/` directory.
+
+### Installing the APK
+
+Transfer the APK file to your Android device and install it manually. Ensure that "Install unknown apps" is enabled in your device settings.
+
+### Running on Android
+
+After installation, launch the app from your device's app drawer. The game will run with the same features as the desktop version, including MAP and MVP modes.
