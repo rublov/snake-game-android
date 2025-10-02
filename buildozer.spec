@@ -1,93 +1,87 @@
 [app]
 
-# (str) Title of your application
+# Название приложения
 title = Snake Game
 
-# (str) Package name
+# Имя пакета (используется в Java/Android)
 package.name = snakegame
 
-# (str) Package domain (needed for android/ios packaging)
+# Домен (можно указать любой обратный домен)
 package.domain = com.pygame
 
-# (str) Source code where the main.py live
+# Папка с исходниками (текущая директория)
 source.dir = .
 
-# (list) Source files to include (let empty to include all the files)
+# Какие файлы включать в сборку
 source.include_exts = py,png,jpg,kv,atlas,json,mp3,wav
 
-# (str) Application versioning (method 1)
+# Версия приложения
 version = 1.0
 
-# (list) Application requirements
-# comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy==2.2.1,pyjnius
+# Зависимости (Kivy, Python и прочее)
+requirements = python3,kivy==2.2.1,pyjnius,requests
 
-# (list) Garden requirements
-garden_requirements = 
+# Модули Kivy Garden, если нужны (оставим пустым — нет)
+garden_requirements =
 
-# (list) Recipe dependencies (p4a recipes)
+# Ветка p4a (используется "develop", можно сменить на "master")
 p4a.branch = develop
 
-# (str) Presplash of the application
+# Сплэш-экран
 presplash.filename = %(source.dir)s/splash.png
 
-# (str) Icon of the application
-#icon.filename = %(source.dir)s/icon.png
+# Иконка (если нужно, раскомментируй)
+# icon.filename = %(source.dir)s/icon.png
 
-# (str) Supported orientation (landscape, portrait or all)
+# Ориентация экрана
 orientation = portrait
 
-# (bool) Indicate if the application should be fullscreen or not
+# Полноэкранный режим
 fullscreen = 1
 
-# (list) Permissions
+# Разрешения Android
 android.permissions = INTERNET,ACCESS_NETWORK_STATE
 
-# (int) Target Android API, should be as high as possible.
+# Целевая версия API Android
 android.api = 31
 
-# (int) Minimum API your APK will support.
+# Минимальная поддерживаемая версия API
 android.minapi = 21
 
-# (str) Android NDK version to use
+# Версия NDK
 android.ndk = 25b
 
-# (str) Android SDK Build-tools version to use
+# Версия Build-tools
 android.build_tools_version = 34.0.0
 
-# (bool) Use --private data storage (True) or --dir public storage (False)
+# Использовать приватное хранилище приложения
 android.private_storage = True
 
-# (str) Android logcat filters to use
+# Фильтры logcat
 android.logcat_filters = *:S python:D
 
-# (bool) Copy library instead of making a libpymodules.so
+# Копировать библиотеки внутрь APK
 android.copy_libs = 1
 
-# (str) The Android arch to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
+# Архитектура Android (64-бит ARM)
 android.archs = arm64-v8a
 
-# (str) Custom source folders for requirements
-# Sets custom source for any requirements with recipes
-# requirements.source.kivy = ../../kivy
-
-# (list) Kivy Garden modules to include
-garden_requirements = 
-
-# (str) Kivy options
+# Требуемая версия Kivy
 kivy.require = 2.2.1
+
+# Отключаем SVG (опционально)
+kivy.graphics.svg = 0
+
+# Настройки Kivy (оптимизация)
 kivy.skip_gl_redirect = 0
 kivy.no_config = 1
 kivy.no_use_deprecation = 1
 
-# Kivy build options
-# disable svg module
-kivy.graphics.svg = 0
 
 [buildozer]
 
-# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
+# Уровень логов (0 = только ошибки, 1 = инфо, 2 = отладка)
 log_level = 2
 
-# (int) Display warning if buildozer is run as root (0 = False, 1 = True)
+# Показывать предупреждение при запуске от root
 warn_on_root = 1
