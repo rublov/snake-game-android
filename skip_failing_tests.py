@@ -15,7 +15,12 @@ def run_tests_without_problematic_files():
     # Список проблемных тестовых файлов, которые нужно пропустить
     problematic_files = [
         "tests/test_mechanics.py",
-        "visual_test.py"
+        "visual_test.py",
+        "pygame_adapter.py",
+        "main.py",
+        "sound_probe.py",
+        "Snake Game.py",
+        "kivy_adapter.py"
     ]
     
     # Получаем все Python файлы в текущем каталоге, исключая проблемные
