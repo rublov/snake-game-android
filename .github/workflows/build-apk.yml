@@ -10,130 +10,24 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      PYTHONUNBUFFERED: "1"
 
     steps:
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          df -h
-
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-          cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            requirements-dev.txt
-            buildozer.spec
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Install system dependencies
+      - name: Build Docker image
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            git zip unzip wget \
-            autoconf automake libtool pkg-config \
-            build-essential ccache libltdl-dev \
-            zlib1g-dev libncurses-dev libncursesw5-dev \
-            libffi-dev libssl-dev cmake \
-            libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
-            libfreetype6-dev libpng-dev libjpeg-dev \
-            libgles2-mesa-dev libgstreamer1.0-dev gstreamer1.0-plugins-good \
-            libmtdev-dev xclip xsel \
-            libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev \
-            libmikmod-dev libsmpeg-dev \
-            libx11-dev libxcursor-dev libxinerama-dev libxi-dev \
-            librsvg2-dev libxml2-dev libcairo2-dev
-          sudo apt-get clean
+          docker build -t snake-game-builder .
 
-      - name: Install Python dependencies
+      - name: Run Buildozer in Docker
         run: |
-          # python-for-android пока не совместим с pip >= 24 (см. https://github.com/kivy/python-for-android/issues/3097)
-          python -m pip install --upgrade "pip==23.2.1"
-          python -m pip --version
-          python -m pip install -r requirements-dev.txt
-          python -m pip install buildozer==1.5.0 Cython==0.29.33 virtualenv
-
-      - name: Run Ruff (lint)
-        run: ruff check .
-
-      - name: Cache Buildozer global directory
-        uses: actions/cache@v3
-        with:
-          path: .buildozer_global
-          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
-
-      - name: Cache Buildozer directory
-        uses: actions/cache@v3
-        with:
-          path: .buildozer
-          key: buildozer-${{ hashFiles('buildozer.spec') }}
-
-      - name: Verify buildozer.spec exists
-        run: |
-          if [ ! -f buildozer.spec ]; then
-            echo "Error: buildozer.spec not found!"
-            exit 1
-          fi
-          echo "=== buildozer.spec content ==="
-          cat buildozer.spec
-
-      - name: Setup Android SDK
-        run: |
-          set -e
-          mkdir -p ~/.buildozer/android/platform/android-sdk
-          cd ~/.buildozer/android/platform
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip
-          mkdir -p android-sdk/cmdline-tools
-          mv cmdline-tools android-sdk/cmdline-tools/latest
-          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-          mkdir -p android-sdk/licenses
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > android-sdk/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> android-sdk/licenses/android-sdk-license
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > android-sdk/licenses/android-sdk-preview-license
-          yes | sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-31" "build-tools;34.0.0"
-          mkdir -p android-sdk/tools/bin
-          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager android-sdk/tools/bin/sdkmanager
-          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager android-sdk/tools/bin/avdmanager
-          echo "Android SDK setup completed"
-          ls -la android-sdk/tools/bin/ || true
-
-      - name: Build APK with Buildozer
-        run: |
-          export CCACHE_DIR=$HOME/.ccache
-          export USE_CCACHE=1
-          ccache -M 2G
-          echo "Buildozer configuration:"
-          cat buildozer.spec
-          export KIVY_NO_SVG=1
-          export KIVY_NO_CONSOLELOG=0
-          export KIVY_NO_CONFIG=1
-          export KIVY_BUILD_DEPENDENCIES=0
-          export BUILDOZER_ALLOW_LEGACY_INTERNAL_STYLE=1
-          buildozer -v android debug
-        env:
-          BUILDOZER_WARN_ON_ROOT: 0
-          ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
-          ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
-          USE_CCACHE: 1
-          NDK_CCACHE: ccache
-        timeout-minutes: 60
+          docker run --rm \
+            -v ${{ github.workspace }}:/app \
+            -v ${{ github.workspace }}/.buildozer:/root/.buildozer \
+            snake-game-builder
 
       - name: Upload APK
         if: success()
@@ -143,28 +37,11 @@ jobs:
           path: bin/*.apk
           retention-days: 30
 
-      - name: Dump Buildozer logs
+      - name: Upload logs on failure
         if: failure()
-        run: |
-          set +e
-          BASE=.buildozer/android/platform/build-arm64-v8a
-          echo "=== Available log files ==="
-          find .buildozer -maxdepth 5 -type f -name "*.log" -print || true
-          if [ -f "$BASE/build.log" ]; then
-            echo "=== build.log (last 400 lines) ==="
-            tail -n 400 "$BASE/build.log"
-          else
-            echo "build.log not found"
-          fi
-          if [ -f "$BASE/logs/python-for-android.log" ]; then
-            echo "=== python-for-android.log (last 400 lines) ==="
-            tail -n 400 "$BASE/logs/python-for-android.log"
-          fi
-          if [ -f "$BASE/logs/hostpython.log" ]; then
-            echo "=== hostpython.log (last 200 lines) ==="
-            tail -n 200 "$BASE/logs/hostpython.log"
-          fi
-          if [ -d "$BASE/obj" ]; then
-            echo "=== Recent compiler errors (grep -i error) ==="
-            grep -RIn "error:" "$BASE/obj" | tail -n 40 || true
-          fi
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-logs
+          path: .buildozer/android/platform/build-*/logs/
+          retention-days: 7
+          if-no-files-found: warn
