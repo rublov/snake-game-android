@@ -1,0 +1,19 @@
+# CodeFactor Configuration
+# Документация: https://github.com/codefactor-io/codefactor/wiki/Configuring-CodeFactor
+
+# Исключаем определенные файлы и папки из анализа
+exclude_paths:
+  - "tests/**"
+  - "**/__pycache__/**"
+  - ".github/**"
+  - "assets/**"
+  - "*.md"
+  - "*.txt"
+  - ".gitignore"
+
+# Настройка для Python
+languages:
+  python:
+    ignore:
+      - "visual_test.py"
+      - "Snake Game.py"   # Плохое именование файла, но игнорируем для совместимости

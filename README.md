@@ -1,5 +1,9 @@
 # Snake Eater
 
+![Quality Checks](https://github.com/rublov/snake-game-android/actions/workflows/quality.yml/badge.svg)
+![Build Android APK](https://github.com/rublov/snake-game-android/actions/workflows/build-apk.yml/badge.svg)
+[![CodeFactor](https://www.codefactor.io/repository/github/rublov/snake-game-android/badge)](https://www.codefactor.io/repository/github/rublov/snake-game-android)
+
 A snake game written in Python using the Pygame library.
 
 ## Features
@@ -84,6 +88,27 @@ If no baseline exists, it will create one.
 - Run `bandit "Snake Game.py"` for static security analysis.
 - Run `safety check --file requirements.txt` for dependency
   vulnerability checks.
+
+### Continuous Integration
+
+This repository ships with three GitHub Actions workflows:
+
+- `Quality Checks` — headless среда с запуском `ruff`, `mypy` и unit-тестов
+   на каждый push/pull request.
+- `Build Android APK` — сборка Android-пакета через Buildozer и загрузка
+   артефакта.
+- `CodeFactor` — статический анализ CodeFactor. Для работы требуется секрет
+   `CODEFACTOR_TOKEN`, который можно получить в личном кабинете CodeFactor
+   (Account → Integrations → GitHub Action token) и добавить в настройках
+   репозитория GitHub (`Settings → Secrets and variables → Actions`).
+
+Запустите их вручную на вкладке **Actions** или повторите локально:
+
+```bash
+ruff check .
+mypy snake_game
+pytest
+```
 
 ## Changes for MVP/MAP Modes Implementation
 
