@@ -38,12 +38,21 @@ jobs:
         run: |
           docker build -t snake-game-builder .
 
+      - name: Prepare Android SDK License
+        run: |
+          mkdir -p ${{ github.workspace }}/.android
+          echo '8933bad161af4178b1185d1a37fbf41ea5269c55
+          d56f5187479451eabf01fb78af6dfcb131a6481e
+          24333f8a63b6825ea9c5514f83c2829b004d1fee' > ${{ github.workspace }}/.android/repositories.cfg
+
       - name: Run Buildozer in Docker
         run: |
           docker run --rm \
             -e BUILDOZER_WARN_ON_ROOT=0 \
+            -e ANDROID_HOME=/opt/android-sdk \
             -v ${{ github.workspace }}:/app \
             -v ${{ github.workspace }}/.buildozer:/root/.buildozer \
+            -v ${{ github.workspace }}/.android:/root/.android \
             snake-game-builder
 
       - name: Upload APK
