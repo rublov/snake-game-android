@@ -5,8 +5,9 @@ visual regression testing.
 """
 
 import os
-from PIL import Image, ImageChops
+
 import pygame
+from PIL import Image, ImageChops
 
 
 def capture_screenshot(filename="screenshot.png"):

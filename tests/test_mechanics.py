@@ -1,9 +1,8 @@
 import importlib.util
 import os
-from pathlib import Path
 import unittest
+from pathlib import Path
 from unittest import mock
-
 
 os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
 os.environ['SNAKE_GAME_SKIP_LOOP'] = '1'

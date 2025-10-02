@@ -1,5 +1,6 @@
 import os
 import time
+
 import pygame
 
 BASE_DIR = os.path.dirname(__file__)
