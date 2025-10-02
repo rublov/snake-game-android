@@ -1,13 +1,18 @@
 """
 Online Leaderboard Module for Snake Game
-Uses a simple JSON API backend for storing and retrieving scores
+Uses a simple JSON API backend for storing and retrieving scores.
 """
+
+from __future__ import annotations
 
 import json
 import logging
-from typing import List, Dict, Optional
-from urllib import request
 import socket
+import time
+from typing import TypedDict
+from urllib.parse import urljoin, urlparse
+
+import requests
 
 # Simple free JSON storage API (можно заменить на свой backend)
 API_BASE_URL = "https://api.jsonbin.io/v3/b"
@@ -16,6 +21,22 @@ BIN_ID = "YOUR_BIN_ID"  # ID вашего bin после создания
 
 # Fallback: используем локальное хранилище если API недоступен
 LOCAL_LEADERBOARD_FILE = "leaderboard_local.json"
+
+_SAFE_URL_SCHEMES = {"http", "https"}
+
+
+class ScoreEntry(TypedDict):
+    name: str
+    score: int
+    mode: str
+    timestamp: float
+
+
+def _ensure_safe_url(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme not in _SAFE_URL_SCHEMES:
+        raise ValueError(f"Unsupported URL scheme: {parsed.scheme}")
+    return url
 
 
 class LeaderboardManager:
@@ -32,7 +53,7 @@ class LeaderboardManager:
             socket.create_connection(("8.8.8.8", 53), timeout=2)
             self.online = True
             return True
-        except (OSError, socket.timeout):
+        except (OSError, TimeoutError):
             self.online = False
             logging.warning("No internet connection, using local leaderboard")
             return False
@@ -44,11 +65,11 @@ class LeaderboardManager:
         mode: str = "mvp"
     ) -> bool:
         """Submit a score to the leaderboard"""
-        entry = {
+        entry: ScoreEntry = {
             "name": player_name,
             "score": score,
             "mode": mode,
-            "timestamp": __import__('time').time()
+            "timestamp": time.time(),
         }
 
         if self.online:
@@ -57,51 +78,53 @@ class LeaderboardManager:
             except Exception as e:
                 logging.error(f"Failed to submit score online: {e}")
                 return self._submit_local(entry)
-        else:
-            return self._submit_local(entry)
+        return self._submit_local(entry)
 
-    def _submit_online(self, entry: Dict) -> bool:
+    def _submit_online(self, entry: ScoreEntry) -> bool:
         """Submit score to online API"""
         try:
             # Get current leaderboard
             current_data = self.get_leaderboard()
 
             # Add new entry
-            if not current_data:
-                current_data = []
-            current_data.append(entry)
+            updated = list(current_data) if current_data else []
+            updated.append(entry)
 
             # Sort by score (descending)
-            current_data.sort(key=lambda x: x['score'], reverse=True)
+            updated.sort(key=lambda item: item["score"], reverse=True)
 
             # Keep only top 100
-            current_data = current_data[:100]
+            trimmed = updated[:100]
 
             # Update online
-            url = f"{API_BASE_URL}/{BIN_ID}"
+            url = _ensure_safe_url(urljoin(f"{API_BASE_URL}/", BIN_ID))
             headers = {
-                'Content-Type': 'application/json',
-                'X-Master-Key': API_KEY
+                "Content-Type": "application/json",
+                "X-Master-Key": API_KEY,
             }
-            data = json.dumps(current_data).encode('utf-8')
-
-            req = request.Request(
-                url, data=data, headers=headers, method='PUT'
+            response = requests.put(
+                url,
+                data=json.dumps(trimmed, ensure_ascii=False),
+                headers=headers,
+                timeout=self.timeout,
             )
-            with request.urlopen(req, timeout=self.timeout) as response:
-                return response.status == 200
+            response.raise_for_status()
+            return response.status_code == 200
 
-        except Exception as e:
-            logging.error(f"Online submit failed: {e}")
+        except requests.RequestException as exc:
+            logging.error("Online submit failed: %s", exc)
+            raise
+        except Exception as exc:  # noqa: BLE001 - bubble unexpected issues
+            logging.error("Online submit failed: %s", exc)
             raise
 
-    def _submit_local(self, entry: Dict) -> bool:
+    def _submit_local(self, entry: ScoreEntry) -> bool:
         """Submit score to local file"""
         try:
             # Load existing data
             try:
-                with open(LOCAL_LEADERBOARD_FILE, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                with open(LOCAL_LEADERBOARD_FILE, encoding="utf-8") as src:
+                    data: list[ScoreEntry] = json.load(src)
             except (FileNotFoundError, json.JSONDecodeError):
                 data = []
 
@@ -109,12 +132,12 @@ class LeaderboardManager:
             data.append(entry)
 
             # Sort and keep top 100
-            data.sort(key=lambda x: x['score'], reverse=True)
-            data = data[:100]
+            data.sort(key=lambda item: item["score"], reverse=True)
+            trimmed = data[:100]
 
             # Save
-            with open(LOCAL_LEADERBOARD_FILE, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+            with open(LOCAL_LEADERBOARD_FILE, "w", encoding="utf-8") as dst:
+                json.dump(trimmed, dst, indent=2, ensure_ascii=False)
 
             return True
 
@@ -124,9 +147,9 @@ class LeaderboardManager:
 
     def get_leaderboard(
         self,
-        mode: Optional[str] = None,
+        mode: str | None = None,
         limit: int = 10
-    ) -> List[Dict]:
+    ) -> list[ScoreEntry]:
         """Get top scores from leaderboard"""
         if self.online:
             try:
@@ -134,52 +157,58 @@ class LeaderboardManager:
             except Exception as e:
                 logging.error(f"Failed to get online leaderboard: {e}")
                 return self._get_local(mode, limit)
-        else:
-            return self._get_local(mode, limit)
+        return self._get_local(mode, limit)
 
     def _get_online(
         self,
-        mode: Optional[str],
+        mode: str | None,
         limit: int
-    ) -> List[Dict]:
+    ) -> list[ScoreEntry]:
         """Get leaderboard from online API"""
         try:
-            url = f"{API_BASE_URL}/{BIN_ID}/latest"
-            headers = {'X-Master-Key': API_KEY}
-
-            req = request.Request(url, headers=headers)
-            with request.urlopen(req, timeout=self.timeout) as response:
-                result = json.loads(response.read().decode('utf-8'))
-                data = result.get('record', [])
-
-                # Filter by mode if specified
-                if mode:
-                    data = [
-                        entry for entry in data
-                        if entry.get('mode') == mode
-                    ]
-
-                return data[:limit]
-
-        except Exception as e:
-            logging.error(f"Online get failed: {e}")
-            raise
-
-    def _get_local(
-        self,
-        mode: Optional[str],
-        limit: int
-    ) -> List[Dict]:
-        """Get leaderboard from local file"""
-        try:
-            with open(LOCAL_LEADERBOARD_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+            url = _ensure_safe_url(
+                urljoin(f"{API_BASE_URL}/", f"{BIN_ID}/latest")
+            )
+            response = requests.get(
+                url,
+                headers={"X-Master-Key": API_KEY},
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            result = response.json()
+            data: list[ScoreEntry] = result.get("record", [])
 
             # Filter by mode if specified
             if mode:
                 data = [
                     entry for entry in data
-                    if entry.get('mode') == mode
+                    if entry.get("mode") == mode
+                ]
+
+            return data[:limit]
+
+        except requests.RequestException as exc:
+            logging.error("Online get failed: %s", exc)
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logging.error("Online get failed: %s", exc)
+            raise
+
+    def _get_local(
+        self,
+        mode: str | None,
+        limit: int
+    ) -> list[ScoreEntry]:
+        """Get leaderboard from local file"""
+        try:
+            with open(LOCAL_LEADERBOARD_FILE, encoding="utf-8") as src:
+                data: list[ScoreEntry] = json.load(src)
+
+            # Filter by mode if specified
+            if mode:
+                data = [
+                    entry for entry in data
+                    if entry.get("mode") == mode
                 ]
 
             return data[:limit]
@@ -187,11 +216,11 @@ class LeaderboardManager:
         except (FileNotFoundError, json.JSONDecodeError):
             return []
 
-    def get_player_rank(self, player_name: str, mode: str) -> Optional[int]:
+    def get_player_rank(self, player_name: str, mode: str) -> int | None:
         """Get player's rank in leaderboard (1-based)"""
         leaderboard = self.get_leaderboard(mode=mode, limit=100)
         for i, entry in enumerate(leaderboard, 1):
-            if entry.get('name') == player_name:
+            if entry.get("name") == player_name:
                 return i
         return None
 

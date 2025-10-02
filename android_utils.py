@@ -1,25 +1,25 @@
 # Script to fix permissions in Android package
 # This is useful if you encounter permission issues with files
 
-def fix_android_permissions():
+def fix_android_permissions() -> bool:
     try:
         from jnius import autoclass
-        
+
         # Get Android activity
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
-        activity = PythonActivity.mActivity
-        
+        python_activity = autoclass("org.kivy.android.PythonActivity")
+        activity = python_activity.mActivity
+
         # Request permissions
         if activity:
             # Add necessary permission requests here if needed
             pass
-            
+
         return True
-    except Exception as e:
-        print(f"Error setting Android permissions: {e}")
+    except Exception as exc:
+        print(f"Error setting Android permissions: {exc}")
         return False
 
 
 # This function is called by main.py when running on Android
-def setup_android():
+def setup_android() -> None:
     fix_android_permissions()

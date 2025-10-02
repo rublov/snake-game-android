@@ -3,8 +3,9 @@ Simple Splash Screen Generator for Snake Game
 Creates a splash screen image using PIL/Pillow
 """
 
-from PIL import Image, ImageDraw, ImageFont
 import os
+
+from PIL import Image, ImageDraw, ImageFont
 
 # Create splash screen image
 width = 720
@@ -21,7 +22,7 @@ try:
     # Try to use a nice font
     title_font = ImageFont.truetype("arial.ttf", 100)
     subtitle_font = ImageFont.truetype("arial.ttf", 40)
-except BaseException:
+except OSError:
     # Fallback to default font
     title_font = ImageFont.load_default()
     subtitle_font = ImageFont.load_default()

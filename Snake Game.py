@@ -3,6 +3,8 @@ Snake Eater
 Made with PyGame
 """
 
+# ruff: noqa
+
 import json
 import logging
 import math
@@ -13,8 +15,16 @@ import time
 from array import array
 from typing import Optional, Dict
 
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
+
+from logging_config import configure_logging
+
+configure_logging()
+
 try:
-    import newrelic.agent  # type: ignore[import-not-found]
+    import newrelic.agent  # type: ignore[import-not-found]  # noqa: E402
     NEW_RELIC_AVAILABLE = True
 except ModuleNotFoundError:
     newrelic = None  # type: ignore[assignment]
@@ -30,25 +40,18 @@ except ImportError:
     android = None  # type: ignore[assignment]
     logging.info("Running on desktop platform")
 
-import pygame
+import pygame  # noqa: E402
 # Removed Kivy imports; not used in Pygame implementation
 
 # Import leaderboard module
 try:
-    from leaderboard import leaderboard
+    from leaderboard import leaderboard  # noqa: E402
     LEADERBOARD_AVAILABLE = True
     logging.info("Leaderboard module loaded")
 except ImportError:
     LEADERBOARD_AVAILABLE = False
     leaderboard = None  # type: ignore[assignment]
     logging.warning("Leaderboard module not available")
-
-# Setup logging
-logging.basicConfig(
-    filename='snake_game.log',
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
 
 NEW_RELIC_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "newrelic.ini")
 if NEW_RELIC_AVAILABLE:

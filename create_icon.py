@@ -14,14 +14,15 @@ img = Image.new('RGB', (width, height), color=background_color)
 draw = ImageDraw.Draw(img)
 
 # Try to load a font, fallback to default
+font: ImageFont.FreeTypeFont | ImageFont.ImageFont
 try:
     # Try different font sizes for the emoji
     font_size = 300
     font = ImageFont.truetype("seguiemj.ttf", font_size)
-except:
+except OSError:
     try:
         font = ImageFont.truetype("arial.ttf", 256)
-    except:
+    except OSError:
         font = ImageFont.load_default()
 
 # Draw snake emoji

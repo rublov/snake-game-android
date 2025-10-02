@@ -1,63 +1,82 @@
-"""
-Модуль адаптера pygame/pygame_sdl2 для совместимости с Android
-"""
+"""Модуль адаптера pygame/pygame_sdl2 для совместимости с Android."""
 
-# Пытаемся импортировать pygame_sdl2 для Android
+from __future__ import annotations
+
+import logging
+from collections.abc import Sequence
+
+logger = logging.getLogger(__name__)
+
+try:  # noqa: SIM105 - привязка для платформенных зависимостей
+    import android  # type: ignore[import-not-found]
+    from android.permissions import (  # type: ignore[import-not-found]
+        Permission,
+        request_permissions,
+    )
+except ImportError:  # pragma: no cover - выполняется вне Android
+    android = None
+    Permission = None  # type: ignore[assignment]
+    request_permissions = None  # type: ignore[assignment]
+
+ANDROID = android is not None
+
 try:
     import pygame_sdl2
+except ImportError:
+    pygame_sdl2 = None
+
+
+if pygame_sdl2 is not None:
     pygame_sdl2.import_as_pygame()
     USING_SDL2 = True
-    print("Используется pygame_sdl2 для Android")
-except ImportError:
+    logger.info("Используется pygame_sdl2 для Android")
+else:
     USING_SDL2 = False
-    print("pygame_sdl2 не найден, используется стандартный pygame")
+    logger.info("pygame_sdl2 не найден, используется стандартный pygame")
 
-# Импортируем pygame (возможно уже замененный на pygame_sdl2)
-import pygame
+import pygame  # noqa: E402
 
-# Константы для проверки платформы
-try:
-    import android
-    from android.permissions import request_permissions, Permission
-    ANDROID = True
-    print("Запущено на Android платформе")
-except ImportError:
-    ANDROID = False
-    android = None
-    print("Запущено на десктоп-платформе")
 
-def init_platform():
-    """
-    Инициализирует специфичные для платформы настройки
-    """
+def _request_android_permissions(permissions: Sequence[object]) -> None:
+    if request_permissions is None:
+        logger.debug("Пропуск запроса прав: функция недоступна")
+
+        return
+
+    try:
+        request_permissions(list(permissions))
+        logger.info("Разрешения Android запрошены")
+    except Exception as exc:  # noqa: BLE001 - логируем любые ошибки платформы
+        logger.exception("Ошибка при запросе Android-разрешений: %s", exc)
+
+
+def init_platform() -> pygame.module:
+    """Инициализирует специфичные для платформы настройки."""
     if ANDROID:
-        try:
-            # Запрашиваем необходимые разрешения на Android
-            request_permissions([
-                Permission.WRITE_EXTERNAL_STORAGE,
-                Permission.READ_EXTERNAL_STORAGE
-            ])
-            print("Разрешения Android запрошены")
-            
-            # Настраиваем отображение окна на Android
-            if hasattr(pygame, 'display'):
-                pygame.display.init()
-                print(f"Доступные разрешения: {pygame.display.list_modes()}")
-        except Exception as e:
-            print(f"Ошибка при настройке Android: {e}")
-    
-    # Общая инициализация pygame
+        _request_android_permissions(
+            [
+                Permission.WRITE_EXTERNAL_STORAGE if Permission else None,
+                Permission.READ_EXTERNAL_STORAGE if Permission else None,
+            ]
+        )
+
+        if hasattr(pygame, "display"):
+            pygame.display.init()
+
+            logger.debug(
+                "Доступные разрешения: %s",
+                pygame.display.list_modes(),
+            )
+
     pygame.init()
     return pygame
 
-def get_platform_info():
-    """
-    Возвращает информацию о текущей платформе и используемом pygame
-    """
-    info = {
+
+def get_platform_info() -> dict[str, object]:
+    """Возвращает информацию о текущей платформе и используемом pygame."""
+    return {
         "android": ANDROID,
         "using_sdl2": USING_SDL2,
         "pygame_version": pygame.version.ver,
         "sdl_version": pygame.version.SDL,
     }
-    return info
