@@ -1,5 +1,6 @@
 # Используем проверенный образ с Buildozer и всеми зависимостями
-FROM kivy/buildozer:1.5.0
+# latest соответствует стабильной версии образа
+FROM kivy/buildozer:latest
 
 # Устанавливаем рабочую директорию
 WORKDIR /app
