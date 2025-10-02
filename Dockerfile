@@ -38,7 +38,7 @@ RUN mkdir -p /root/.buildozer/android/platform
 
 # Создаём файл для автоматического принятия лицензий
 RUN mkdir -p /root/.android && \
-    echo '8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee' \
+    printf '8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n' \
     > /root/.android/repositories.cfg && \
     mkdir -p /root/.buildozer/.android
 
