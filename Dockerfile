@@ -7,7 +7,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     ANDROID_NDK_HOME=/opt/android-ndk \
     PATH="${PATH}:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools" \
     BUILDOZER_WARN_ON_ROOT=0 \
-    JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+    JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
+    TMPDIR=/tmp \
+    TMP=/tmp \
+    TEMP=/tmp
 
 # Устанавливаем системные зависимости
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -42,9 +45,10 @@ RUN yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses && \
     "platforms;android-31" \
     "ndk;25.2.9519653"
 
-# Устанавливаем Buildozer и Cython
+# Обновляем Buildozer до последней версии для исправления проблем с временными файлами
 RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir buildozer==1.5.0 cython==0.29.33
+    pip3 install --no-cache-dir buildozer==1.5.0 cython==0.29.33 && \
+    pip3 install --no-cache-dir --upgrade python-for-android
 
 # Рабочая директория
 WORKDIR /app
@@ -59,10 +63,21 @@ RUN pip3 install --no-cache-dir -r requirements-dev.txt || true
 RUN mkdir -p /root/.buildozer/android/platform
 
 # Создаём дополнительные каталоги для Buildozer
-RUN mkdir -p /root/.buildozer/.android
+RUN mkdir -p /root/.buildozer/.android && \
+    mkdir -p /tmp/buildozer && \
+    chmod 1777 /tmp && \
+    chmod 755 /tmp/buildozer
+
+# Настраиваем права доступа для временных файлов
+RUN mkdir -p /root/.cache && \
+    chmod -R 755 /root/.cache
 
 # Проверяем, что aidl установлен
 RUN ls -la ${ANDROID_HOME}/build-tools/34.0.0/aidl || echo "AIDL not found, but continuing..."
 
+# Создаем скрипт-обертку для buildozer с улучшенной обработкой ошибок
+RUN echo '#!/bin/bash\nset -e\necho "Запуск buildozer с улучшенной обработкой ошибок..."\nexec buildozer "$@"' > /usr/local/bin/buildozer-wrapper && \
+    chmod +x /usr/local/bin/buildozer-wrapper
+
 # Запускаем сборку APK с автоматическим принятием лицензий
-CMD ["buildozer", "-v", "android", "debug"]
+CMD ["buildozer-wrapper", "-v", "android", "debug"]
