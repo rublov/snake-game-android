@@ -49,7 +49,7 @@ android.api = 31
 android.minapi = 21
 
 # Версия NDK
-android.ndk = 25b
+android.ndk = 25.2.9519653
 
 # Версия Build-tools
 android.build_tools_version = 34.0.0

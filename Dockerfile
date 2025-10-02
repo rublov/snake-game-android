@@ -20,6 +20,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libreadline-dev libsqlite3-dev libbz2-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Устанавливаем Android SDK
+RUN mkdir -p ${ANDROID_HOME} && \
+    cd ${ANDROID_HOME} && \
+    wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip && \
+    unzip -q commandlinetools-linux-9477386_latest.zip && \
+    rm commandlinetools-linux-9477386_latest.zip && \
+    mkdir -p cmdline-tools/latest && \
+    mv cmdline-tools/* cmdline-tools/latest/ && \
+    rmdir cmdline-tools || true
+
+# Принимаем лицензии Android SDK и устанавливаем необходимые компоненты
+RUN mkdir -p /root/.android && \
+    printf '8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n' \
+    > /root/.android/repositories.cfg
+
+RUN yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses && \
+    ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager \
+    "platform-tools" \
+    "build-tools;34.0.0" \
+    "platforms;android-31" \
+    "ndk;25.2.9519653"
+
 # Устанавливаем Buildozer и Cython
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir buildozer==1.5.0 cython==0.29.33
@@ -36,11 +58,11 @@ RUN pip3 install --no-cache-dir -r requirements-dev.txt || true
 # Создаём каталоги для Buildozer
 RUN mkdir -p /root/.buildozer/android/platform
 
-# Создаём файл для автоматического принятия лицензий
-RUN mkdir -p /root/.android && \
-    printf '8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n' \
-    > /root/.android/repositories.cfg && \
-    mkdir -p /root/.buildozer/.android
+# Создаём дополнительные каталоги для Buildozer
+RUN mkdir -p /root/.buildozer/.android
+
+# Проверяем, что aidl установлен
+RUN ls -la ${ANDROID_HOME}/build-tools/34.0.0/aidl || echo "AIDL not found, but continuing..."
 
 # Запускаем сборку APK с автоматическим принятием лицензий
 CMD ["buildozer", "-v", "android", "debug"]
