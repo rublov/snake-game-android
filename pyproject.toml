@@ -51,11 +51,8 @@ exclude = [
     ".buildozer",
     "Snake Game.py",
     "pygame_adapter.py",
+    "tests/test_mechanics.py",
 ]
-
-[[tool.mypy.overrides]]
-module = "tests.test_mechanics"
-ignore_errors = true
 
 [tool.mypy-tests]
 python_version = "3.11"
