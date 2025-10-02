@@ -14,6 +14,7 @@ import sys
 import time
 from array import array
 from typing import Optional, Dict
+import numpy as np
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
@@ -328,74 +329,40 @@ def update_music() -> None:
     pass
 
 
-def create_level_up_tone(
-    frequency: int = 880,
-    duration: float = 0.35,
-    volume: float = 0.45,
-):
-    """Generate a simple sine wave tone for level-up feedback."""
-
-    init = pygame.mixer.get_init()
-    if not init:
-        return None
-
-    sample_rate, format_bits, channels = init
-    sample_rate = int(sample_rate)
-    bit_depth = abs(int(format_bits))
-    max_amplitude = (2 ** (bit_depth - 1)) - 1
-    amplitude = int(max_amplitude * max(0.0, min(volume, 1.0)))
-    sample_count = max(1, int(sample_rate * duration))
-
-    wave = array('h')
-    for t in range(sample_count):
-        angle = 2 * math.pi * frequency * t / sample_rate
-        sample = int(amplitude * math.sin(angle))
-        if channels >= 2:
-            wave.append(sample)
-            wave.append(sample)
-        else:
-            wave.append(sample)
-
-    try:
-        return pygame.mixer.Sound(buffer=wave.tobytes())
-    except pygame.error:
-        logging.debug("Failed to create fallback level-up tone", exc_info=True)
-        return None
+def generate_sound_wave(frequency, duration, volume):
+    """Generates a sound wave as a pygame.mixer.Sound object."""
+    sample_rate = 44100
+    n_samples = int(round(duration * sample_rate))
+    buf = np.zeros((n_samples, 2), dtype=np.int16)
+    max_sample = 2 ** 15 - 1
+    for s in range(n_samples):
+        t = float(s) / sample_rate
+        sine_wave = max_sample * math.sin(2 * math.pi * frequency * t)
+        buf[s][0] = int(round(sine_wave))
+        buf[s][1] = int(round(sine_wave))
+    sound = pygame.sndarray.make_sound(buf)
+    sound.set_volume(volume)
+    return sound
 
 
-def create_eat_tone(
-    frequency: int = 440,
-    duration: float = 0.2,
-    volume: float = 0.65,
-):
-    """Generate a simple sine wave tone for eating feedback."""
+def create_level_up_tone():
+    """Creates a tone for leveling up."""
+    return generate_sound_wave(880.0, 0.2, 0.1)
 
-    init = pygame.mixer.get_init()
-    if not init:
-        return None
 
-    sample_rate, format_bits, channels = init
-    sample_rate = int(sample_rate)
-    bit_depth = abs(int(format_bits))
-    max_amplitude = (2 ** (bit_depth - 1)) - 1
-    amplitude = int(max_amplitude * max(0.0, min(volume, 1.0)))
-    sample_count = max(1, int(sample_rate * duration))
+def create_eat_tone():
+    """Creates a tone for eating food."""
+    return generate_sound_wave(440.0, 0.1, 0.1)
 
-    wave = array('h')
-    for t in range(sample_count):
-        angle = 2 * math.pi * frequency * t / sample_rate
-        sample = int(amplitude * math.sin(angle))
-        if channels >= 2:
-            wave.append(sample)
-            wave.append(sample)
-        else:
-            wave.append(sample)
 
-    try:
-        return pygame.mixer.Sound(buffer=wave.tobytes())
-    except pygame.error:
-        logging.debug("Failed to create fallback eat tone", exc_info=True)
-        return None
+def create_move_tone():
+    """Creates a tone for snake movement."""
+    return generate_sound_wave(220.0, 0.05, 0.05)
+
+
+def create_map_mode_tone():
+    """Creates a tone for map mode."""
+    return generate_sound_wave(660.0, 0.15, 0.1)
 
 
 def set_sound_volume(sound, volume: float, label: str):
@@ -728,405 +695,101 @@ def refresh_premium_state():
         save_settings()
 
 
-update_colors()
-refresh_premium_state()
-
-promo_input = ''
-fps_controller = pygame.time.Clock()
-
-
-# Game variables
-snake_pos = [100, 50]
-snake_body = [[100, 50], [100 - 10, 50], [100 - (2 * 10), 50]]
-
-food_pos = [rng.randrange(1, (frame_size_x // 10)) * 10,
-            rng.randrange(1, (frame_size_y // 10)) * 10]
-food_spawn = False
-food_type = 'normal'
-current_food_color = pygame.Color(255, 255, 255)
-current_food_value = 1
-current_food_effect = None
-
-direction = 'RIGHT'
-change_to = direction
-
-score = 0
-
-start_time = 0
-
-invincible_until = 0
-
-paused = False
-
-game_state = 'menu'
-player_name = "Player"  # Default player name for leaderboard
-
-level = 1
-walls = []
-moving_walls = []
-wrap_edges = False
-speed_boost_on_food = False
-speed_boost_active_until = 0
-speed_boost_bonus = 10
-SPEED_BOOST_DURATION = 5
-INVINCIBLE_DURATION = 6
-MAX_MAP_LEVEL = 6
-MAX_MVP_LEVEL = 1
-MAX_SURVIVAL_LEVEL = 99
-SURVIVAL_SPEED_INCREMENT = 3
-
-played_death = False
-
-
-def reset_game():
-    global snake_pos, snake_body, food_pos, food_spawn, direction, change_to, \
-        score, paused, played_death, level, walls, moving_walls, \
-        wrap_edges, speed_boost_on_food, speed_boost_active_until, \
-        invincible_until, premium_offer_active
-    snake_pos = [100, 50]
-    snake_body = [[100, 50], [100 - 10, 50], [100 - (2 * 10), 50]]
-    food_spawn = False
-    spawn_food()
-    direction = 'RIGHT'
-    change_to = direction
-    score = 0
-    paused = False
-    played_death = False
-    level = 1
-    walls = []
-    moving_walls = []
-    wrap_edges = False
-    speed_boost_on_food = False
-    speed_boost_active_until = 0
-    invincible_until = 0
-    premium_offer_active = False
-    load_level(level)
-    # Apply settings
-    global difficulty
-    if mode in ('mvp', 'mvp2'):
-        difficulty = 5
-    else:
-        difficulty = speed_setting
-    update_music()
-    global start_time
-    start_time = time.time()
-
-
-def load_level(lvl):
-    global walls, snake_color, moving_walls, wrap_edges, speed_boost_on_food
-
-    walls = []
-    moving_walls = []
-    wrap_edges = False
-    speed_boost_on_food = False
-
-    if mode in ('mvp', 'mvp2'):
-        # MVP mode: no walls, keep classic color
-        snake_color = green
-        return
-
-    if mode == 'survival':
-        # Survival: no walls, focus on speed scaling
-        snake_color = pygame.Color(0, 255, 127)
-        return
-
-    if lvl <= 1:
-        snake_color = green
-        return
-
-    if lvl == 2:
-        # Vertical walls in center
-        walls = [
-            pygame.Rect(frame_size_x // 2 - 10, 100, 20, 200),
-            pygame.Rect(frame_size_x // 2 - 10, 350, 20, 200),
-        ]
-        snake_color = green
-        return
-
-    if lvl == 3:
-        # Cross walls with gaps
-        walls = [
-            pygame.Rect(frame_size_x // 2 - 10, 0, 20, frame_size_y // 2 - 50),
-            pygame.Rect(
-                frame_size_x // 2 - 10,
-                frame_size_y // 2 + 50,
-                20,
-                frame_size_y // 2 - 50,
-            ),
-            pygame.Rect(0, frame_size_y // 2 - 10, frame_size_x // 2 - 50, 20),
-            pygame.Rect(
-                frame_size_x // 2 + 50,
-                frame_size_y // 2 - 10,
-                frame_size_x // 2 - 50,
-                20,
-            ),
-        ]
-        snake_color = pygame.Color(255, 0, 255)  # Bright purple
-        return
-
-    if lvl == 4:
-        # Moving horizontal barriers that sweep vertically
-        snake_color = pygame.Color(255, 140, 0)  # Vibrant orange
-        band_height = 15
-        travel_margin = 40
-        moving_walls = [
-            {
-                'rect': pygame.Rect(
-                    80,
-                    travel_margin,
-                    frame_size_x - 160,
-                    band_height,
-                ),
-                'velocity': [0, 2],
-                'axis': 'y',
-                'min_pos': travel_margin,
-                'max_pos': frame_size_y - travel_margin - band_height,
-            },
-            {
-                'rect': pygame.Rect(
-                    80,
-                    frame_size_y - travel_margin - band_height,
-                    frame_size_x - 160,
-                    band_height,
-                ),
-                'velocity': [0, -2],
-                'axis': 'y',
-                'min_pos': travel_margin,
-                'max_pos': frame_size_y - travel_margin - band_height,
-            },
-        ]
-        return
-
-    if lvl == 5:
-        # Teleporting through edges (wrap-around)
-        snake_color = pygame.Color(0, 191, 255)  # Deep sky blue
-        wrap_edges = True
-        # Add central obstacles to navigate towards portals
-        pad = 40
-        walls = [
-            pygame.Rect(
-                pad,
-                frame_size_y // 2 - 10,
-                frame_size_x // 2 - 80,
-                20,
-            ),
-            pygame.Rect(
-                frame_size_x // 2 + 40,
-                frame_size_y // 2 - 10,
-                frame_size_x // 2 - 80,
-                20,
-            ),
-        ]
-        return
-
-    # Level 6 and beyond fall back to acceleration theme
-    snake_color = pygame.Color(50, 205, 50)  # Lime green
-    speed_boost_on_food = True
-    walls = [
-        pygame.Rect(0, 0, frame_size_x, 10),
-        pygame.Rect(0, frame_size_y - 10, frame_size_x, 10),
-    ]
-
-
-def iter_wall_rects():
-    for rect in walls:
-        yield rect
-    for moving in moving_walls:
-        yield moving['rect']
-
-
-def update_moving_walls():
-    for moving in moving_walls:
-        rect = moving['rect']
-        dx, dy = moving['velocity']
-        rect.x += dx
-        rect.y += dy
-        axis = moving.get('axis', 'y')
-        if axis == 'y':
-            min_pos = moving.get('min_pos', 0)
-            max_pos = moving.get('max_pos', frame_size_y)
-            if rect.top <= min_pos:
-                rect.top = min_pos
-                moving['velocity'][1] = abs(dy)
-            elif rect.bottom >= max_pos:
-                rect.bottom = max_pos
-                moving['velocity'][1] = -abs(dy)
+def update_and_show_game_status():
+    """Calculates and displays the current game status."""
+    now = time.time()
+    elapsed_time = int(now - start_time)
+    elapsed_minutes = elapsed_time // 60
+    elapsed_seconds = elapsed_time % 60
+    elapsed_str = f'Вр:{elapsed_minutes}:{elapsed_seconds:02d}'
+    if mode == 'map':
+        remaining_seconds = max(0, int(map_end_time - now))
+        if remaining_seconds > 0:
+            minutes = remaining_seconds // 60
+            seconds = remaining_seconds % 60
+            mode_text = f'Премиум{current_premium_minutes}'
+            countdown = f'До:{minutes}:{seconds:02d}'
         else:
-            min_pos = moving.get('min_pos', 0)
-            max_pos = moving.get('max_pos', frame_size_x)
-            if rect.left <= min_pos:
-                rect.left = min_pos
-                moving['velocity'][0] = abs(dx)
-            elif rect.right >= max_pos:
-                rect.right = max_pos
-                moving['velocity'][0] = -abs(dx)
-
-
-def choose_food_type():
-    if mode in ('mvp', 'mvp2'):
-        return 'normal'
-
-    if speed_boost_on_food:
-        return 'speed'
-
-    config = MODE_FOOD_CONFIG.get(mode, MODE_FOOD_CONFIG['mvp'])
-    progress_level = max(0, level - 1)
-    score_factor = min(score / 15.0, 6.0)
-
-    probabilities = {}
-    for food_type, weights in config.items():
-        if food_type == 'max_total':
-            continue
-        base = weights.get('base', 0.0)
-        level_increment = weights.get('level', 0.0) * progress_level
-        score_increment = weights.get('score', 0.0) * score_factor
-        probability = base + level_increment + score_increment
-        cap = weights.get('cap')
-        if cap is not None:
-            probability = min(probability, cap)
-        probabilities[food_type] = max(0.0, probability)
-
-    total_prob = sum(probabilities.values())
-    max_total = config.get('max_total', 0.65)
-    if total_prob > max_total > 0:
-        scale = max_total / total_prob
-        for food_type in probabilities:
-            probabilities[food_type] *= scale
-        total_prob = sum(probabilities.values())
-
-    roll = rng.random()
-    cumulative = 0.0
-    for food_type in ('bonus', 'shield', 'speed'):
-        cumulative += probabilities.get(food_type, 0.0)
-        if roll < cumulative:
-            return food_type
-
-    return 'normal'
-
-
-def spawn_food(force_type=None):
-    global food_pos, food_spawn, food_type, current_food_color
-    global current_food_value, current_food_effect
-
-    cell_size = 10
-
-    attempts = 0
-    while True:
-        attempts += 1
-        candidate = [
-            rng.randrange(1, (frame_size_x // cell_size)) * cell_size,
-            rng.randrange(1, (frame_size_y // cell_size)) * cell_size,
-        ]
-        candidate_rect = pygame.Rect(
-            candidate[0],
-            candidate[1],
-            cell_size,
-            cell_size,
-        )
-        if any(candidate_rect.colliderect(rect) for rect in iter_wall_rects()):
-            continue
-        if any(
-            candidate_rect.collidepoint(segment[0], segment[1])
-            for segment in snake_body
-        ):
-            continue
-        break
-
-    selected_type = force_type or choose_food_type()
-    config = FOOD_TYPE_CONFIG.get(selected_type, FOOD_TYPE_CONFIG['normal'])
-
-    food_pos = candidate
-    food_type = selected_type
-    current_food_color = config['color']
-    current_food_value = config['score']
-    current_food_effect = config['effect']
-
-    if speed_boost_on_food and selected_type == 'normal':
-        current_food_effect = 'speed'
-        current_food_color = orange
-
-    food_spawn = True
-
-
-spawn_food()
-
-
-# Game Over
-def game_over():
-    global game_state, best_score, player_name
-    if score > best_score:
-        best_score = score
-        save_settings()
-
-    # Submit score to leaderboard
-    if LEADERBOARD_AVAILABLE and score > 0:
-        try:
-            name = (
-                player_name if 'player_name' in globals() else "Player"
-            )
-            leaderboard.submit_score(name, score, mode)
-            logging.info(f"Score submitted to leaderboard: {score}")
-        except Exception as e:
-            logging.error(f"Failed to submit score: {e}")
-
-    game_state = 'game_over'
-
-
-# Score
-def show_score(
-    choice,
-    color,
-    font,
-    size,
-    mode_text='',
-    countdown='',
-    elapsed='',
-    extra_parts=None,
-):
-    score_font = pygame.font.SysFont(font, size)
-    if mode == 'mvp2':
-        parts = [
-            f'Сч:{score}',
-            'Классика2',
-            f'Ск:{difficulty}',
-        ]
-        if elapsed:
-            parts.append(elapsed)
+            mode_text = 'Классика'
+            countdown = ''
+    elif mode == 'survival':
+        mode_text = 'Выживание'
+        countdown = ''
     elif mode == 'mvp':
-        parts = [
-            f'Сч:{score}',
-            f'Хвост:{len(snake_body) - 1}'
-        ]
-        if elapsed:
-            parts.append(elapsed)
+        mode_text = 'Классика'
+        countdown = ''
+    elif mode == 'mvp2':
+        mode_text = ''
+        countdown = ''
     else:
-        parts = [
-            f'Сч:{score}',
-            f'Ур:{level}',
-            f'Ск:{difficulty}'
-        ]
-        if elapsed:
-            parts.append(elapsed)
-    if mode_text:
-        parts.append(mode_text)
-    text = ' '.join(parts)
-    score_surface = score_font.render(text, True, color)
-    score_rect = score_surface.get_rect()
-    if choice == 1:
-        score_rect.topleft = (10, 10)
-    else:
-        score_rect.midtop = (frame_size_x / 2, frame_size_y / 1.25)
-    game_window.blit(score_surface, score_rect)
-    # pygame.display.flip()
+        mode_text = ''
+        countdown = ''
+    effects_parts = []
+    if speed_boost_active_until > now:
+        boost_time = int(speed_boost_active_until - now)
+        effects_parts.append(f'Буст:{boost_time}')
+    if invincible_until > now:
+        shield_time = int(invincible_until - now)
+        effects_parts.append(f'Щит:{shield_time}')
+    if food_type != 'normal':
+        food_label = FOOD_LABELS.get(food_type, food_type)
+        effects_parts.append(f'Еда:{food_label}')
+    show_score(
+        1,
+        white,
+        'consolas',
+        20,
+        mode_text,
+        countdown,
+        elapsed_str,
+        effects_parts,
+    )
 
 
-# Touch controls class removed - use keyboard controls for now
-# For mobile support, consider implementing Kivy in a separate branch
+# gameLoop
+def gameLoop():
+    # ... existing code ...
+    while not game_over:
+        while game_close:
+            # ... existing code ...
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    # ... existing code ...
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_q:
+                        # ... existing code ...
+            update_and_show_game_status()
+            pygame.display.update()
 
-# Placeholder comment for future mobile implementation
-
-
-# Main logic
+        for event in pygame.event.get():
+            # ... existing code ...
+        if x1 >= dis_width or x1 < 0 or y1 >= dis_height or y1 < 0:
+            if invincible_until > time.time():
+                # ... existing code ...
+            else:
+                game_close = True
+        x1 += x1_change
+        y1 += y1_change
+        dis.fill(blue)
+        # ... existing code ...
+        snake_Head = []
+        snake_Head.append(x1)
+        snake_Head.append(y1)
+        snake_List.append(snake_Head)
+        if len(snake_List) > Length_of_snake:
+            del snake_List[0]
+        for x in snake_List[:-1]:
+            if x == snake_Head:
+                if invincible_until > time.time():
+                    # ... existing code ...
+                else:
+                    game_close = True
+        our_snake(snake_block, snake_List)
+        update_and_show_game_status()
+        pygame.display.update()
+        if x1 == foodx and y1 == foody:
+            # ... existing code ...
+        # Main logic
 RUN_GAME_LOOP = os.environ.get('SNAKE_GAME_SKIP_LOOP') != '1'
 
 while RUN_GAME_LOOP:
@@ -1614,53 +1277,7 @@ while RUN_GAME_LOOP:
             for moving in moving_walls:
                 pygame.draw.rect(game_window, wall_color, moving['rect'])
 
-            now = time.time()
-            elapsed_time = int(now - start_time)
-            elapsed_minutes = elapsed_time // 60
-            elapsed_seconds = elapsed_time % 60
-            elapsed_str = f'Вр:{elapsed_minutes}:{elapsed_seconds:02d}'
-            if mode == 'map':
-                remaining_seconds = max(0, int(map_end_time - now))
-                if remaining_seconds > 0:
-                    minutes = remaining_seconds // 60
-                    seconds = remaining_seconds % 60
-                    mode_text = f'Премиум{current_premium_minutes}'
-                    countdown = f'До:{minutes}:{seconds:02d}'
-                else:
-                    mode_text = 'Классика'
-                    countdown = ''
-            elif mode == 'survival':
-                mode_text = 'Выживание'
-                countdown = ''
-            elif mode == 'mvp2':
-                mode_text = ''
-                countdown = ''
-            elif mode == 'mvp':
-                mode_text = 'Классика'
-                countdown = ''
-            else:
-                mode_text = ''
-                countdown = ''
-            effects_parts = []
-            if speed_boost_active_until > now:
-                boost_time = int(speed_boost_active_until - now)
-                effects_parts.append(f'Буст:{boost_time}')
-            if invincible_until > now:
-                shield_time = int(invincible_until - now)
-                effects_parts.append(f'Щит:{shield_time}')
-            if food_type != 'normal':
-                food_label = FOOD_LABELS.get(food_type, food_type)
-                effects_parts.append(f'Еда:{food_label}')
-            show_score(
-                1,
-                white,
-                'consolas',
-                20,
-                mode_text,
-                countdown,
-                elapsed_str,
-                effects_parts,
-            )
+            update_and_show_game_status()
 
             prompt_font = pygame.font.SysFont('times new roman', 36)
             prompt_surface = prompt_font.render(
@@ -1793,9 +1410,6 @@ while RUN_GAME_LOOP:
                     elif mode == 'survival':
                         level_cap = MAX_SURVIVAL_LEVEL
                     else:
-                        level_cap = MAX_MVP_LEVEL
-                    if level < level_cap:
-                        level += 1
                         load_level(level)
                         if mode == 'survival':
                             difficulty += SURVIVAL_SPEED_INCREMENT
@@ -1862,53 +1476,7 @@ while RUN_GAME_LOOP:
                 ):
                     game_over()
 
-            now = time.time()
-            elapsed_time = int(now - start_time)
-            elapsed_minutes = elapsed_time // 60
-            elapsed_seconds = elapsed_time % 60
-            elapsed_str = f'Вр:{elapsed_minutes}:{elapsed_seconds:02d}'
-            if mode == 'map':
-                remaining_seconds = max(0, int(map_end_time - now))
-                if remaining_seconds > 0:
-                    minutes = remaining_seconds // 60
-                    seconds = remaining_seconds % 60
-                    mode_text = f'Премиум{current_premium_minutes}'
-                    countdown = f'До:{minutes}:{seconds:02d}'
-                else:
-                    mode_text = 'Классика'
-                    countdown = ''
-            elif mode == 'survival':
-                mode_text = 'Выживание'
-                countdown = ''
-            elif mode == 'mvp':
-                mode_text = 'Классика'
-                countdown = ''
-            elif mode == 'mvp2':
-                mode_text = ''
-                countdown = ''
-            else:
-                mode_text = ''
-                countdown = ''
-            effects_parts = []
-            if speed_boost_active_until > now:
-                boost_time = int(speed_boost_active_until - now)
-                effects_parts.append(f'Буст:{boost_time}')
-            if invincible_until > now:
-                shield_time = int(invincible_until - now)
-                effects_parts.append(f'Щит:{shield_time}')
-            if food_type != 'normal':
-                food_label = FOOD_LABELS.get(food_type, food_type)
-                effects_parts.append(f'Еда:{food_label}')
-            show_score(
-                1,
-                white,
-                'consolas',
-                20,
-                mode_text,
-                countdown,
-                elapsed_str,
-                effects_parts,
-            )
+            update_and_show_game_status()
             # Show premium expiry message when premium ends
             now = time.time()
             if premium_expiry_message_until > now:
