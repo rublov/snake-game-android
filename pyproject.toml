@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+target-version = ["py311"]
+line-length = 88
+exclude = [
+    "build/",
+    "dist/",
+    ".buildozer/",
+    ".git/",
+    ".pytest_cache/",
+    "__pycache__/",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "I",  # isort
+    "UP", # pyupgrade
+    "B",  # bugbear
+    "N",  # pep8-naming
+    "S",  # bandit
+]
+ignore = [
+    "E203",  # whitespace before ':' (Black-compatible)
+    "S101",  # разрешаем assert в тестах
+]
+exclude = [
+    "build",
+    "dist",
+    ".buildozer",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"Snake Game.py" = ["E501"]  # legacy file со многими длинными строками
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+ignore_missing_imports = true
+follow_imports = "silent"
+exclude = [
+    "build",
+    "dist",
+    ".buildozer",
+    "Snake Game.py",
+]
+
+[tool.mypy-tests]
+python_version = "3.11"
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip = [
+    "build",
+    "dist",
+    ".buildozer",
+]

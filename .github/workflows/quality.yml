@@ -1,0 +1,57 @@
+name: Quality Checks
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    env:
+      KIVY_WINDOW: mock
+      KIVY_AUDIO: mock
+      SDL_VIDEODRIVER: dummy
+      SNAKE_GAME_SKIP_LOOP: "1"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
+            libavutil-dev libjpeg-dev libfreetype6-dev libgl1-mesa-dev \
+            libgles2-mesa-dev libgstreamer1.0-dev gstreamer1.0-plugins-good \
+            libmtdev-dev libffi-dev pkg-config openjdk-17-jdk
+          sudo apt-get clean
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+          # Runtime packages (pyjnius omitted: not required for lint/tests)
+          python -m pip install kivy==2.2.1 pygame==2.6.1 newrelic
+
+      - name: Run Ruff
+        run: ruff check .
+
+      - name: Run MyPy
+        run: mypy snake_game
+
+      - name: Run Pytest
+        run: pytest -q
