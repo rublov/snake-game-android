@@ -1,2 +1,8 @@
+# Runtime dependencies
+kivy==2.2.1
+pyjnius
+requests>=2.32.0
+
+# Legacy Pygame support (desktop testing)
 pygame==2.6.1
 newrelic

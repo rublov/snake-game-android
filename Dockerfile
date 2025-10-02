@@ -47,6 +47,7 @@ RUN yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses && \
 
 # Обновляем Buildozer до последней версии для исправления проблем с временными файлами
 RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir "sh<2.0" && \
     pip3 install --no-cache-dir buildozer==1.5.0 cython==0.29.33 && \
     pip3 install --no-cache-dir --upgrade python-for-android
 
@@ -76,7 +77,7 @@ RUN mkdir -p /root/.cache && \
 RUN ls -la ${ANDROID_HOME}/build-tools/34.0.0/aidl || echo "AIDL not found, but continuing..."
 
 # Создаем скрипт-обертку для buildozer с улучшенной обработкой ошибок
-RUN echo '#!/bin/bash\nset -e\necho "Запуск buildozer с улучшенной обработкой ошибок..."\nexec buildozer "$@"' > /usr/local/bin/buildozer-wrapper && \
+RUN printf '#!/bin/bash\nset -e\necho "Запуск buildozer с улучшенной обработкой ошибок..."\nexec buildozer "$@"' > /usr/local/bin/buildozer-wrapper && \
     chmod +x /usr/local/bin/buildozer-wrapper
 
 # Запускаем сборку APK с автоматическим принятием лицензий
