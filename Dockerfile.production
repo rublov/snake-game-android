@@ -201,7 +201,8 @@ echo ""\n\
 echo "🔧 Fixing sh version before buildozer..."\n\
 python3 -m pip uninstall -y sh\n\
 python3 -m pip install --no-cache-dir "sh>=1.10,<2.0"\n\
-echo "✅ sh version fixed: $(python3 -c \"import sh; print(sh.__version__)\")"\n\
+SH_VERSION=$(python3 -c '"'"'import sh; print(sh.__version__)'"'"')\n\
+echo "✅ sh version fixed: $SH_VERSION"\n\
 echo ""\n\
 \n\
 # Запуск Buildozer\n\
