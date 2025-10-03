@@ -1,0 +1,78 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+.buildozer/
+bin/
+build/
+dist/
+*.egg-info/
+
+# Documentation (не нужно в образе)
+*.md
+docs/
+
+# Tests (не нужны в production образе)
+tests/
+test_*.py
+*_test.py
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+*.out
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Временные файлы
+*.tmp
+*.temp
+tmp/
+temp/
+
+# CI/CD (не нужно в образе)
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Docker (избегаем рекурсии)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Node (если есть)
+node_modules/
+package-lock.json
+
+# Buildozer spec (копируем отдельно)
+buildozer.spec
+
+# Скрипты сборки (не нужны внутри образа)
+build-apk.ps1
+build-apk.sh

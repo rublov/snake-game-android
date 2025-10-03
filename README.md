@@ -1,10 +1,36 @@
-# Snake Eater
+# 🐍 Snake Game Pro - Android + Desktop
 
 ![Quality Checks](https://github.com/rublov/snake-game-android/actions/workflows/quality.yml/badge.svg)
 ![Build Android APK](https://github.com/rublov/snake-game-android/actions/workflows/build-apk.yml/badge.svg)
+![Build APK (Docker)](https://github.com/rublov/snake-game-android/actions/workflows/build-apk-docker.yml/badge.svg)
 [![CodeFactor](https://www.codefactor.io/repository/github/rublov/snake-game-android/badge)](https://www.codefactor.io/repository/github/rublov/snake-game-android)
 
-A snake game written in Python using the Pygame library.
+🎮 Классическая игра Змейка на Python с поддержкой **Android** и **Desktop**
+
+---
+
+## 🚀 Быстрый Старт
+
+### 📱 Собрать APK для Android
+
+```powershell
+# Windows
+.\build-apk.ps1
+
+# Linux/Mac
+chmod +x build-apk.sh && ./build-apk.sh
+```
+
+📖 **Подробная инструкция**: [QUICKSTART.md](QUICKSTART.md) | [BUILD_APK_GUIDE.md](BUILD_APK_GUIDE.md)
+
+### 💻 Запустить на Desktop
+
+```bash
+pip install -r requirements.txt
+python snake_game.py
+```
+
+---
 
 ## Features
 

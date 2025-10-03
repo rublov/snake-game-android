@@ -1,0 +1,117 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # Ручной запуск
+
+jobs:
+  build-apk:
+    name: Build APK with Docker + Buildozer
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: 💾 Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      
+      - name: 🔨 Build Docker image
+        run: |
+          docker build \
+            -f Dockerfile.production \
+            -t snakegame-builder:latest \
+            --cache-from=type=local,src=/tmp/.buildx-cache \
+            --cache-to=type=local,dest=/tmp/.buildx-cache-new \
+            .
+      
+      - name: 📦 Build APK
+        run: |
+          docker run \
+            --name snakegame-build \
+            -v ${{ github.workspace }}:/app \
+            snakegame-builder:latest
+      
+      - name: 📋 Show build results
+        run: |
+          echo "=== Build completed ==="
+          if [ -d "bin" ]; then
+            echo "APK files found:"
+            ls -lh bin/*.apk || echo "No APK files"
+          else
+            echo "⚠️ bin directory not found"
+          fi
+      
+      - name: 📤 Upload APK artifact
+        uses: actions/upload-artifact@v3
+        if: success()
+        with:
+          name: snake-game-apk
+          path: bin/*.apk
+          retention-days: 30
+      
+      - name: 📤 Upload build logs
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: buildozer-logs
+          path: |
+            buildozer_full.log
+            .buildozer/android/platform/build-*/build.log
+          retention-days: 7
+      
+      - name: 🎉 Create Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: bin/*.apk
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 💬 Comment PR with APK
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const apkFiles = fs.readdirSync('bin').filter(f => f.endsWith('.apk'));
+            
+            let comment = '## 📱 APK Build Successful!\n\n';
+            comment += '### Generated APK files:\n';
+            
+            apkFiles.forEach(apk => {
+              const stats = fs.statSync(`bin/${apk}`);
+              const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
+              comment += `- \`${apk}\` (${sizeMB} MB)\n`;
+            });
+            
+            comment += '\n📥 Download artifact from workflow run to test the APK.';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+      
+      - name: 🧹 Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache || true

@@ -1,0 +1,228 @@
+# ==============================================================================
+# DOCKERFILE ДЛЯ ГАРАНТИРОВАННОЙ СБОРКИ APK
+# ==============================================================================
+# Этот Dockerfile создан для стабильной и воспроизводимой сборки Android APK
+# через Buildozer + Python-for-Android
+# ==============================================================================
+
+FROM ubuntu:22.04
+
+# ==============================================================================
+# СИСТЕМНЫЕ ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ
+# ==============================================================================
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    # Android SDK пути
+    ANDROID_HOME=/opt/android-sdk \
+    ANDROID_SDK_ROOT=/opt/android-sdk \
+    ANDROID_NDK_HOME=/opt/android-ndk \
+    # Java
+    JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
+    # PATH
+    PATH="${PATH}:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/opt/android-sdk/build-tools/34.0.0" \
+    # Buildozer
+    BUILDOZER_WARN_ON_ROOT=0 \
+    # Python/Pip настройки для избежания --user внутри virtualenv
+    PIP_USER=0 \
+    PIP_NO_USER=1 \
+    PYTHONUNBUFFERED=1 \
+    # Временные директории
+    TMPDIR=/tmp \
+    TMP=/tmp \
+    TEMP=/tmp
+
+# ==============================================================================
+# УСТАНОВКА БАЗОВЫХ СИСТЕМНЫХ ЗАВИСИМОСТЕЙ
+# ==============================================================================
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Python и виртуальное окружение
+    python3.10 python3.10-venv python3-pip \
+    # Система контроля версий
+    git \
+    # Архиваторы
+    zip unzip \
+    # Утилиты загрузки
+    wget curl ca-certificates \
+    # Java для Android
+    openjdk-17-jdk \
+    # Компиляторы и build tools
+    build-essential ccache gcc g++ \
+    # Библиотеки для Python пакетов
+    libffi-dev libssl-dev \
+    zlib1g-dev \
+    libncurses5-dev libncursesw5-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    libbz2-dev \
+    liblzma-dev \
+    # Дополнительные утилиты
+    pkg-config \
+    autoconf automake libtool \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# ==============================================================================
+# УСТАНОВКА ANDROID SDK
+# ==============================================================================
+
+RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
+    cd ${ANDROID_HOME}/cmdline-tools && \
+    wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip && \
+    unzip -q commandlinetools-linux-9477386_latest.zip && \
+    rm commandlinetools-linux-9477386_latest.zip && \
+    mv cmdline-tools latest
+
+# ==============================================================================
+# НАСТРОЙКА ANDROID SDK И УСТАНОВКА КОМПОНЕНТОВ
+# ==============================================================================
+
+# Создаем конфигурацию для принятия лицензий
+RUN mkdir -p /root/.android && \
+    touch /root/.android/repositories.cfg
+
+# Принимаем лицензии и устанавливаем компоненты
+RUN yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses || true && \
+    ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --update && \
+    ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager \
+        "platform-tools" \
+        "build-tools;34.0.0" \
+        "platforms;android-31" \
+        "ndk;25.2.9519653" \
+        "cmake;3.22.1"
+
+# Создаем символическую ссылку для NDK
+RUN ln -s ${ANDROID_HOME}/ndk/25.2.9519653 ${ANDROID_NDK_HOME}
+
+# ==============================================================================
+# СОЗДАНИЕ ВИРТУАЛЬНОГО ОКРУЖЕНИЯ PYTHON
+# ==============================================================================
+
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Обновляем pip, setuptools, wheel
+RUN pip install --no-cache-dir --upgrade \
+    pip>=23.0 \
+    setuptools>=65.0 \
+    wheel>=0.38
+
+# ==============================================================================
+# УСТАНОВКА BUILDOZER И ЗАВИСИМОСТЕЙ
+# ==============================================================================
+
+# Устанавливаем Cython (важно для p4a)
+RUN pip install --no-cache-dir "Cython==0.29.33"
+
+# Устанавливаем Buildozer
+RUN pip install --no-cache-dir "buildozer==1.5.0"
+
+# Устанавливаем python-for-android
+RUN pip install --no-cache-dir "python-for-android"
+
+# Устанавливаем дополнительные утилиты
+RUN pip install --no-cache-dir \
+    "sh<2.0,>=1.10" \
+    colorama \
+    appdirs \
+    pyyaml
+
+# ==============================================================================
+# НАСТРОЙКА РАБОЧЕЙ ДИРЕКТОРИИ
+# ==============================================================================
+
+WORKDIR /app
+
+# Копируем файлы проекта
+COPY . /app
+
+# ==============================================================================
+# СОЗДАНИЕ НЕОБХОДИМЫХ ДИРЕКТОРИЙ
+# ==============================================================================
+
+RUN mkdir -p \
+    /root/.buildozer/android/platform \
+    /root/.buildozer/.android \
+    /root/.cache \
+    /tmp/buildozer && \
+    chmod 1777 /tmp && \
+    chmod -R 755 /root/.cache
+
+# ==============================================================================
+# СОЗДАНИЕ BUILD СКРИПТА
+# ==============================================================================
+
+RUN printf '#!/bin/bash\n\
+set -e\n\
+set -x\n\
+\n\
+echo "========================================"\n\
+echo "🚀 BUILDOZER APK BUILD SCRIPT"\n\
+echo "========================================"\n\
+\n\
+# Информация о системе\n\
+echo ""\n\
+echo "📋 System Information:"\n\
+echo "  Python: $(python --version)"\n\
+echo "  Buildozer: $(buildozer --version)"\n\
+echo "  Working Dir: $(pwd)"\n\
+echo "  Java: $JAVA_HOME"\n\
+echo "  Android SDK: $ANDROID_HOME"\n\
+echo "  Android NDK: $ANDROID_NDK_HOME"\n\
+echo ""\n\
+\n\
+# Проверка места на диске\n\
+echo "💾 Disk Space:"\n\
+df -h /\n\
+echo ""\n\
+\n\
+# Очистка предыдущих сборок (опционально)\n\
+if [ "$CLEAN_BUILD" = "1" ]; then\n\
+  echo "🧹 Cleaning previous builds..."\n\
+  rm -rf .buildozer bin __pycache__\n\
+  echo "✅ Clean complete"\n\
+fi\n\
+\n\
+# Запуск Buildozer\n\
+echo ""\n\
+echo "========================================"\n\
+echo "🔨 Starting Buildozer Build"\n\
+echo "========================================"\n\
+\n\
+buildozer -v android debug 2>&1 | tee /app/buildozer_full.log\n\
+\n\
+EXIT_CODE=${PIPESTATUS[0]}\n\
+\n\
+if [ $EXIT_CODE -ne 0 ]; then\n\
+  echo ""\n\
+  echo "========================================"\n\
+  echo "❌ BUILD FAILED (Exit Code: $EXIT_CODE)"\n\
+  echo "========================================"\n\
+  echo ""\n\
+  echo "📄 Last 100 lines of log:"\n\
+  tail -n 100 /app/buildozer_full.log\n\
+  exit $EXIT_CODE\n\
+fi\n\
+\n\
+echo ""\n\
+echo "========================================"\n\
+echo "✅ BUILD SUCCESSFUL"\n\
+echo "========================================"\n\
+\n\
+# Показываем результат\n\
+if [ -d "bin" ]; then\n\
+  echo ""\n\
+  echo "📦 Generated APK files:"\n\
+  ls -lh bin/*.apk || echo "No APK found"\n\
+  echo ""\n\
+fi\n\
+\n\
+echo "🎉 Build completed successfully!"\n\
+' > /usr/local/bin/build-apk && \
+    chmod +x /usr/local/bin/build-apk
+
+# ==============================================================================
+# ENTRYPOINT
+# ==============================================================================
+
+CMD ["/usr/local/bin/build-apk"]
