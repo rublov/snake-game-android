@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-apk:
-    name: Build APK with Buildozer Action
+    name: Build APK with Official Kivy Docker
     runs-on: ubuntu-latest
     timeout-minutes: 90
     
@@ -16,25 +16,35 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
       
-      - name: 🔨 Build APK with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          workdir: .
-          buildozer_version: stable
+      - name: 🔨 Build APK with Buildozer in Docker
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/home/user/hostcwd" \
+            kivy/buildozer:latest \
+            bash -c "cd /home/user/hostcwd && buildozer -v android debug"
+      
+      - name: 📋 Show build results
+        run: |
+          echo "=== Build completed ==="
+          if [ -d "bin" ]; then
+            echo "APK files found:"
+            ls -lh bin/*.apk || echo "No APK files"
+          else
+            echo "⚠️ bin directory not found"
+          fi
       
       - name: 📤 Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: snake-game-apk
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: bin/*.apk
           retention-days: 30
       
       - name: 🎉 Create Release (on tag)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ steps.buildozer.outputs.filename }}
+          files: bin/*.apk
           generate_release_notes: true
           draft: false
           prerelease: false
