@@ -122,10 +122,8 @@ RUN mkdir -p /opt/venv /root/.config/pip && \
 # Экспортируем путь к конфигу pip
 ENV PIP_CONFIG_FILE=/opt/venv/pip.conf
 
-# Обновляем pip, setuptools, wheel
-# Явно отключаем --user для pip через переменные окружения
-RUN PIP_USER=0 PIP_NO_USER=1 PIP_NO_USER_CONFIG=1 \
-    pip install --no-cache-dir --upgrade \
+# Обновляем pip, setuptools, wheel (используем глобальные ENV и pip.conf)
+RUN pip install --no-cache-dir --upgrade \
     pip>=23.0 \
     setuptools>=65.0 \
     wheel>=0.38
@@ -135,20 +133,16 @@ RUN PIP_USER=0 PIP_NO_USER=1 PIP_NO_USER_CONFIG=1 \
 # ==============================================================================
 
 # Устанавливаем Cython (важно для p4a)
-RUN PIP_USER=0 PIP_NO_USER=1 PIP_NO_USER_CONFIG=1 \
-    pip install --no-cache-dir "Cython==0.29.33"
+RUN pip install --no-cache-dir "Cython==0.29.33"
 
 # Устанавливаем Buildozer
-RUN PIP_USER=0 PIP_NO_USER=1 PIP_NO_USER_CONFIG=1 \
-    pip install --no-cache-dir "buildozer==1.5.0"
+RUN pip install --no-cache-dir "buildozer==1.5.0"
 
 # Устанавливаем python-for-android
-RUN PIP_USER=0 PIP_NO_USER=1 PIP_NO_USER_CONFIG=1 \
-    pip install --no-cache-dir "python-for-android"
+RUN pip install --no-cache-dir "python-for-android"
 
 # Устанавливаем дополнительные утилиты
-RUN PIP_USER=0 PIP_NO_USER=1 PIP_NO_USER_CONFIG=1 \
-    pip install --no-cache-dir \
+RUN pip install --no-cache-dir \
     "sh<2.0,>=1.10" \
     colorama \
     appdirs \
