@@ -127,6 +127,18 @@ RUN python3 -m pip install --no-cache-dir \
     appdirs \
     pyyaml
 
+# Находим где установлены Python скрипты и добавляем в PATH
+RUN PYTHON_BIN=$(python3 -c "import site; print(site.USER_BASE + '/bin')") && \
+    echo "Python scripts path: $PYTHON_BIN" && \
+    mkdir -p $PYTHON_BIN
+
+# Добавляем директорию со скриптами Python в PATH
+ENV PATH="/root/.local/bin:/usr/local/bin:$PATH"
+
+# Проверяем что cython доступен (создаём симлинк если нужно)
+RUN which cython || ln -sf /usr/local/bin/cython3 /usr/local/bin/cython || \
+    (find /usr/local -name cython -type f 2>/dev/null | head -1 | xargs -I {} ln -sf {} /usr/local/bin/cython)
+
 # ==============================================================================
 # НАСТРОЙКА РАБОЧЕЙ ДИРЕКТОРИИ
 # ==============================================================================
