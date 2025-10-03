@@ -99,15 +99,28 @@ RUN ln -s ${ANDROID_HOME}/ndk/25.2.9519653 ${ANDROID_NDK_HOME}
 # СОЗДАНИЕ ВИРТУАЛЬНОГО ОКРУЖЕНИЯ PYTHON
 # ==============================================================================
 
+# КРИТИЧНО: Глобально отключаем --user для pip ПЕРЕД созданием venv
+ENV PIP_USER=0 \
+    PIP_NO_USER=1 \
+    PIP_NO_USER_CONFIG=1 \
+    PYTHONNOUSERSITE=1
+
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Создаём конфигурацию pip чтобы гарантированно отключить --user
-RUN mkdir -p /opt/venv && \
+RUN mkdir -p /opt/venv /root/.config/pip && \
     echo "[global]" > /opt/venv/pip.conf && \
     echo "user = false" >> /opt/venv/pip.conf && \
     echo "[install]" >> /opt/venv/pip.conf && \
-    echo "user = false" >> /opt/venv/pip.conf
+    echo "user = false" >> /opt/venv/pip.conf && \
+    echo "[global]" > /root/.config/pip/pip.conf && \
+    echo "user = false" >> /root/.config/pip/pip.conf && \
+    echo "[install]" >> /root/.config/pip/pip.conf && \
+    echo "user = false" >> /root/.config/pip/pip.conf
+
+# Экспортируем путь к конфигу pip
+ENV PIP_CONFIG_FILE=/opt/venv/pip.conf
 
 # Обновляем pip, setuptools, wheel
 # Явно отключаем --user для pip через переменные окружения
@@ -170,6 +183,12 @@ RUN printf '#!/bin/bash\n\
 set -e\n\
 set -x\n\
 \n\
+# КРИТИЧНО: Отключаем --user для всех pip команд внутри buildozer\n\
+export PIP_USER=0\n\
+export PIP_NO_USER=1\n\
+export PIP_NO_USER_CONFIG=1\n\
+export PYTHONNOUSERSITE=1\n\
+\n\
 echo "========================================"\n\
 echo "🚀 BUILDOZER APK BUILD SCRIPT"\n\
 echo "========================================"\n\
@@ -183,6 +202,8 @@ echo "  Working Dir: $(pwd)"\n\
 echo "  Java: $JAVA_HOME"\n\
 echo "  Android SDK: $ANDROID_HOME"\n\
 echo "  Android NDK: $ANDROID_NDK_HOME"\n\
+echo "  PIP_USER: $PIP_USER"\n\
+echo "  PYTHONNOUSERSITE: $PYTHONNOUSERSITE"\n\
 echo ""\n\
 \n\
 # Проверка места на диске\n\
