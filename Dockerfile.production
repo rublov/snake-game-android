@@ -102,8 +102,17 @@ RUN ln -s ${ANDROID_HOME}/ndk/25.2.9519653 ${ANDROID_NDK_HOME}
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Создаём конфигурацию pip чтобы гарантированно отключить --user
+RUN mkdir -p /opt/venv && \
+    echo "[global]" > /opt/venv/pip.conf && \
+    echo "user = false" >> /opt/venv/pip.conf && \
+    echo "[install]" >> /opt/venv/pip.conf && \
+    echo "user = false" >> /opt/venv/pip.conf
+
 # Обновляем pip, setuptools, wheel
-RUN pip install --no-cache-dir --no-user --upgrade \
+# Явно отключаем --user для pip через переменные окружения
+RUN PIP_USER=0 PIP_NO_USER=1 PIP_NO_USER_CONFIG=1 \
+    pip install --no-cache-dir --upgrade \
     pip>=23.0 \
     setuptools>=65.0 \
     wheel>=0.38
@@ -113,16 +122,20 @@ RUN pip install --no-cache-dir --no-user --upgrade \
 # ==============================================================================
 
 # Устанавливаем Cython (важно для p4a)
-RUN pip install --no-cache-dir --no-user "Cython==0.29.33"
+RUN PIP_USER=0 PIP_NO_USER=1 PIP_NO_USER_CONFIG=1 \
+    pip install --no-cache-dir "Cython==0.29.33"
 
 # Устанавливаем Buildozer
-RUN pip install --no-cache-dir --no-user "buildozer==1.5.0"
+RUN PIP_USER=0 PIP_NO_USER=1 PIP_NO_USER_CONFIG=1 \
+    pip install --no-cache-dir "buildozer==1.5.0"
 
 # Устанавливаем python-for-android
-RUN pip install --no-cache-dir --no-user "python-for-android"
+RUN PIP_USER=0 PIP_NO_USER=1 PIP_NO_USER_CONFIG=1 \
+    pip install --no-cache-dir "python-for-android"
 
 # Устанавливаем дополнительные утилиты
-RUN pip install --no-cache-dir --no-user \
+RUN PIP_USER=0 PIP_NO_USER=1 PIP_NO_USER_CONFIG=1 \
+    pip install --no-cache-dir \
     "sh<2.0,>=1.10" \
     colorama \
     appdirs \
