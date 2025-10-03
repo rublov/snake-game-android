@@ -57,7 +57,7 @@ jobs:
           fi
       
       - name: 📤 Upload APK artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: success()
         with:
           name: snake-game-apk
@@ -65,7 +65,7 @@ jobs:
           retention-days: 30
       
       - name: 📤 Upload build logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: buildozer-logs
