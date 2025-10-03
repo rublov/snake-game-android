@@ -25,6 +25,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     # Python/Pip настройки для избежания --user внутри virtualenv
     PIP_USER=0 \
     PIP_NO_USER=1 \
+    PIP_NO_USER_CONFIG=1 \
     PYTHONUNBUFFERED=1 \
     # Временные директории
     TMPDIR=/tmp \

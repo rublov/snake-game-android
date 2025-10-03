@@ -427,9 +427,13 @@ def show_splash_screen(duration: float = 2.0):
 
 
 # Initialize mixer for sound
-pygame.mixer.init()
-pygame.mixer.set_num_channels(32)
-sound_enabled = True
+try:
+    pygame.mixer.init()
+    pygame.mixer.set_num_channels(32)
+    sound_enabled = True
+except pygame.error as exc:
+    sound_enabled = False
+    logging.warning(f"Could not initialize audio: {exc}")
 
 # Load sounds (add eat.mp3, death.mp3, background.mp3 to folder)
 eat_sound = None
