@@ -99,7 +99,8 @@ RUN ln -s ${ANDROID_HOME}/ndk/25.2.9519653 ${ANDROID_NDK_HOME}
 # СОЗДАНИЕ ВИРТУАЛЬНОГО ОКРУЖЕНИЯ PYTHON
 # ==============================================================================
 
-# КРИТИЧНО: Глобально отключаем --user для pip ПЕРЕД созданием venv
+# КРИТИЧНО: Глобально отключаем --user для pip
+# Не используем pip.conf, так как он вызывает конфликты в virtualenv
 ENV PIP_USER=0 \
     PIP_NO_USER=1 \
     PIP_NO_USER_CONFIG=1 \
@@ -107,20 +108,6 @@ ENV PIP_USER=0 \
 
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-
-# Создаём конфигурацию pip чтобы гарантированно отключить --user
-RUN mkdir -p /opt/venv /root/.config/pip && \
-    echo "[global]" > /opt/venv/pip.conf && \
-    echo "user = false" >> /opt/venv/pip.conf && \
-    echo "[install]" >> /opt/venv/pip.conf && \
-    echo "user = false" >> /opt/venv/pip.conf && \
-    echo "[global]" > /root/.config/pip/pip.conf && \
-    echo "user = false" >> /root/.config/pip/pip.conf && \
-    echo "[install]" >> /root/.config/pip/pip.conf && \
-    echo "user = false" >> /root/.config/pip/pip.conf
-
-# Экспортируем путь к конфигу pip
-ENV PIP_CONFIG_FILE=/opt/venv/pip.conf
 
 # Обновляем pip, setuptools, wheel (используем глобальные ENV и pip.conf)
 RUN pip install --no-cache-dir --upgrade \
