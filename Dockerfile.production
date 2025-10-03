@@ -183,7 +183,7 @@ RUN printf '#!/bin/bash\n\
 set -e\n\
 set -x\n\
 \n\
-# КРИТИЧНО: Отключаем --user для всех pip команд внутри buildozer\n\
+# CRITICAL: Disable --user for all pip commands inside buildozer\n\
 export PIP_USER=0\n\
 export PIP_NO_USER=1\n\
 export PIP_NO_USER_CONFIG=1\n\
