@@ -114,18 +114,19 @@ RUN python3 -m pip install --no-cache-dir --upgrade \
 # Устанавливаем Cython (важно для p4a)
 RUN python3 -m pip install --no-cache-dir "Cython==0.29.33"
 
-# Устанавливаем Buildozer
-RUN python3 -m pip install --no-cache-dir "buildozer==1.5.0"
-
-# Устанавливаем python-for-android
-RUN python3 -m pip install --no-cache-dir "python-for-android"
-
 # Устанавливаем дополнительные утилиты
 RUN python3 -m pip install --no-cache-dir \
-    "sh<2.0,>=1.10" \
     colorama \
     appdirs \
     pyyaml
+
+# Устанавливаем Buildozer и python-for-android
+# (они могут установить sh>=2.0 как зависимость)
+RUN python3 -m pip install --no-cache-dir "buildozer==1.5.0" "python-for-android"
+
+# КРИТИЧНО: Переустанавливаем sh с правильной версией ПОСЛЕ всех зависимостей
+# Это гарантирует что python-for-android не перезапишет версию
+RUN python3 -m pip install --no-cache-dir --force-reinstall "sh>=1.10,<2.0"
 
 # Находим где установлены Python скрипты и добавляем в PATH
 RUN PYTHON_BIN=$(python3 -c "import site; print(site.USER_BASE + '/bin')") && \
