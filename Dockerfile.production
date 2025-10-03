@@ -164,7 +164,7 @@ echo "========================================"\n\
 echo ""\n\
 echo "📋 System Information:"\n\
 echo "  Python: $(python3 --version)"\n\
-echo "  Buildozer: $(buildozer --version)"\n\
+echo "  Buildozer: $(python3 -m buildozer --version)"\n\
 echo "  Working Dir: $(pwd)"\n\
 echo "  Java: $JAVA_HOME"\n\
 echo "  Android SDK: $ANDROID_HOME"\n\
@@ -189,7 +189,7 @@ echo "========================================"\n\
 echo "🔨 Starting Buildozer Build"\n\
 echo "========================================"\n\
 \n\
-buildozer -v android debug 2>&1 | tee /app/buildozer_full.log\n\
+python3 -m buildozer -v android debug 2>&1 | tee /app/buildozer_full.log\n\
 \n\
 EXIT_CODE=${PIPESTATUS[0]}\n\
 \n\
