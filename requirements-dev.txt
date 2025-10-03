@@ -7,3 +7,4 @@ requests>=2.32.0
 types-requests>=2.32.0
 pillow>=10.0.0
 sh<2.0,>=1.10
+numpy>=1.24.0

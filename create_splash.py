@@ -20,8 +20,12 @@ draw = ImageDraw.Draw(img)
 # Add title text
 try:
     # Try to use a nice font
-    title_font = ImageFont.truetype("arial.ttf", 100)
-    subtitle_font = ImageFont.truetype("arial.ttf", 40)
+    title_font: ImageFont.FreeTypeFont | ImageFont.ImageFont = (
+        ImageFont.truetype("arial.ttf", 100)
+    )
+    subtitle_font: ImageFont.FreeTypeFont | ImageFont.ImageFont = (
+        ImageFont.truetype("arial.ttf", 40)
+    )
 except OSError:
     # Fallback to default font
     title_font = ImageFont.load_default()
