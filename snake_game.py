@@ -332,6 +332,9 @@ def update_music() -> None:
 
 def generate_sound_wave(frequency, duration, volume):
     """Generates a sound wave as a pygame.mixer.Sound object."""
+    if not mixer_initialized:
+        return None
+    
     sample_rate = 44100
     n_samples = int(round(duration * sample_rate))
     buf = np.zeros((n_samples, 2), dtype=np.int16)
@@ -341,9 +344,14 @@ def generate_sound_wave(frequency, duration, volume):
         sine_wave = max_sample * math.sin(2 * math.pi * frequency * t)
         buf[s][0] = int(round(sine_wave))
         buf[s][1] = int(round(sine_wave))
-    sound = pygame.sndarray.make_sound(buf)
-    sound.set_volume(volume)
-    return sound
+    
+    try:
+        sound = pygame.sndarray.make_sound(buf)
+        sound.set_volume(volume)
+        return sound
+    except pygame.error as exc:
+        logging.warning(f"Could not create sound wave: {exc}")
+        return None
 
 
 def create_level_up_tone():
@@ -427,12 +435,15 @@ def show_splash_screen(duration: float = 2.0):
 
 
 # Initialize mixer for sound
+mixer_initialized = False
 try:
     pygame.mixer.init()
     pygame.mixer.set_num_channels(32)
     sound_enabled = True
+    mixer_initialized = True
 except pygame.error as exc:
     sound_enabled = False
+    mixer_initialized = False
     logging.warning(f"Could not initialize audio: {exc}")
 
 # Load sounds (add eat.mp3, death.mp3, background.mp3 to folder)
@@ -441,11 +452,14 @@ death_sound = None
 level_up_sound = None
 
 try:
-    eat_sound_path = resolve_asset_path('eat.mp3')
-    eat_sound = pygame.mixer.Sound(eat_sound_path)
-    set_sound_volume(eat_sound, 0.85, 'Eat')
-    sound_assets_available = True
-    logging.info("Eat sound loaded from %s", eat_sound_path)
+    if mixer_initialized:
+        eat_sound_path = resolve_asset_path('eat.mp3')
+        eat_sound = pygame.mixer.Sound(eat_sound_path)
+        set_sound_volume(eat_sound, 0.85, 'Eat')
+        sound_assets_available = True
+        logging.info("Eat sound loaded from %s", eat_sound_path)
+    else:
+        logging.info("Mixer not initialized, skipping eat sound")
 except Exception as exc:
     eat_sound = create_eat_tone()
     if eat_sound:
@@ -462,11 +476,14 @@ except Exception as exc:
         )
 
 try:
-    death_sound_path = resolve_asset_path('death.mp3')
-    death_sound = pygame.mixer.Sound(death_sound_path)
-    set_sound_volume(death_sound, 0.7, 'Death')
-    sound_assets_available = True
-    logging.info("Death sound loaded from %s", death_sound_path)
+    if mixer_initialized:
+        death_sound_path = resolve_asset_path('death.mp3')
+        death_sound = pygame.mixer.Sound(death_sound_path)
+        set_sound_volume(death_sound, 0.7, 'Death')
+        sound_assets_available = True
+        logging.info("Death sound loaded from %s", death_sound_path)
+    else:
+        logging.info("Mixer not initialized, skipping death sound")
 except Exception as exc:
     logging.warning(
         'Death sound load failed (%s); continuing without it',
@@ -474,11 +491,14 @@ except Exception as exc:
     )
 
 try:
-    level_up_path = resolve_asset_path('level_up.mp3')
-    level_up_sound = pygame.mixer.Sound(level_up_path)
-    set_sound_volume(level_up_sound, 0.8, 'Level up')
-    sound_assets_available = True
-    logging.info("Level up sound loaded from %s", level_up_path)
+    if mixer_initialized:
+        level_up_path = resolve_asset_path('level_up.mp3')
+        level_up_sound = pygame.mixer.Sound(level_up_path)
+        set_sound_volume(level_up_sound, 0.8, 'Level up')
+        sound_assets_available = True
+        logging.info("Level up sound loaded from %s", level_up_path)
+    else:
+        logging.info("Mixer not initialized, skipping level up sound")
 except Exception as exc:
     level_up_sound = create_level_up_tone()
     if level_up_sound:
@@ -494,10 +514,14 @@ except Exception as exc:
             exc,
         )
 try:
-    background_path = resolve_asset_path('background.mp3')
-    pygame.mixer.music.load(background_path)
-    background_music_available = True
-    logging.info("Background music loaded from %s", background_path)
+    if mixer_initialized:
+        background_path = resolve_asset_path('background.mp3')
+        pygame.mixer.music.load(background_path)
+        background_music_available = True
+        logging.info("Background music loaded from %s", background_path)
+    else:
+        background_music_available = False
+        logging.info("Mixer not initialized, skipping background music")
 except Exception as exc:
     background_music_available = False
     logging.warning(
@@ -512,10 +536,13 @@ update_music()
 move_sound_channel = None
 move_sound = None
 try:
-    move_sound_path = resolve_asset_path('negromkiy-korotkiy-klik.mp3')
-    move_sound = pygame.mixer.Sound(move_sound_path)
-    set_sound_volume(move_sound, 0.5, 'Move')
-    logging.info("Move sound loaded from %s", move_sound_path)
+    if mixer_initialized:
+        move_sound_path = resolve_asset_path('negromkiy-korotkiy-klik.mp3')
+        move_sound = pygame.mixer.Sound(move_sound_path)
+        set_sound_volume(move_sound, 0.5, 'Move')
+        logging.info("Move sound loaded from %s", move_sound_path)
+    else:
+        logging.info("Mixer not initialized, skipping move sound")
 except Exception as exc:
     move_sound = None
     logging.warning(
