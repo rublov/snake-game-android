@@ -50,11 +50,12 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 # Отключаем флаг --user для pip внутри virtualenv
 ENV PIP_USER=0
+ENV PIP_NO_USER=1
 
 # Обновляем pip и устанавливаем зависимости в виртуальное окружение
-RUN pip install --no-cache-dir --upgrade pip && \
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir "sh<2.0,>=1.10" && \
-    pip install --no-cache-dir buildozer==1.5.0 cython==0.29.33 && \
+    pip install --no-cache-dir buildozer cython==0.29.33 && \
     pip install --no-cache-dir --upgrade python-for-android
 
 # Рабочая директория

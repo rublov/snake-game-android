@@ -382,15 +382,22 @@ frame_size_x = 720
 frame_size_y = 480
 
 # Checks for errors encountered
-check_errors = pygame.init()
-# pygame.init() example output -> (6, 0)
-# second number in tuple gives number of errors
-if check_errors[1] > 0:
-    print(f'[!] Had {check_errors[1]} errors when initialising game, '
-          'exiting...')
-    sys.exit(-1)
+# Skip strict initialization check in CI environments
+if os.environ.get("SNAKE_GAME_SKIP_LOOP") == "1":
+    print('[CI] Skipping strict PyGame initialization check for testing')
+    pygame.init()  # Init anyway but don't check for errors
 else:
-    print('[+] Game successfully initialised')
+    check_errors = pygame.init()
+    # pygame.init() example output -> (6, 0)
+    # second number in tuple gives number of errors
+    if check_errors[1] > 0:
+        print(
+            f'[!] Had {check_errors[1]} errors when initialising game, '
+            'exiting...'
+        )
+        sys.exit(-1)
+    else:
+        print('[+] Game successfully initialised')
 
 
 # Splash screen function

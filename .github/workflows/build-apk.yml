@@ -56,6 +56,7 @@ jobs:
             -e ANDROID_HOME=/opt/android-sdk \
             -e TMPDIR=/tmp \
             -e PIP_USER=0 \
+            -e PIP_NO_USER=1 \
             -v ${{ github.workspace }}:/app \
             -v ${{ github.workspace }}/.buildozer:/root/.buildozer \
             -v ${{ github.workspace }}/.android:/root/.android \
