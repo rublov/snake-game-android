@@ -13,6 +13,11 @@ from kivy.clock import Clock  # noqa: E402
 from snake_game.ui.kivy_app import SnakeApp  # noqa: E402
 
 
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true"
+    or os.environ.get("GITHUB_ACTIONS") == "true",
+    reason="Skipping Kivy GUI test in CI (no display available)",
+)
 def test_snake_app_builds_and_stops():
     app = SnakeApp()
     EventLoop.ensure_window()

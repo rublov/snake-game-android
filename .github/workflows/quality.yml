@@ -11,6 +11,7 @@ jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     env:
+      CI: "true"
       KIVY_WINDOW: mock
       KIVY_AUDIO: mock
       SDL_VIDEODRIVER: dummy

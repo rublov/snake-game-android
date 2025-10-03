@@ -103,7 +103,7 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Обновляем pip, setuptools, wheel
-RUN pip install --no-cache-dir --upgrade \
+RUN pip install --no-cache-dir --no-user --upgrade \
     pip>=23.0 \
     setuptools>=65.0 \
     wheel>=0.38
@@ -113,16 +113,16 @@ RUN pip install --no-cache-dir --upgrade \
 # ==============================================================================
 
 # Устанавливаем Cython (важно для p4a)
-RUN pip install --no-cache-dir "Cython==0.29.33"
+RUN pip install --no-cache-dir --no-user "Cython==0.29.33"
 
 # Устанавливаем Buildozer
-RUN pip install --no-cache-dir "buildozer==1.5.0"
+RUN pip install --no-cache-dir --no-user "buildozer==1.5.0"
 
 # Устанавливаем python-for-android
-RUN pip install --no-cache-dir "python-for-android"
+RUN pip install --no-cache-dir --no-user "python-for-android"
 
 # Устанавливаем дополнительные утилиты
-RUN pip install --no-cache-dir \
+RUN pip install --no-cache-dir --no-user \
     "sh<2.0,>=1.10" \
     colorama \
     appdirs \
