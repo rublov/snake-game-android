@@ -44,8 +44,9 @@ garden_requirements =
 # НАСТРОЙКИ PYTHON-FOR-ANDROID
 # ============================================================================
 
-# Ветка python-for-android
-p4a.branch = master
+# КРИТИЧНО: НЕ скачиваем p4a - используем уже установленный из Docker
+# Закомментируем p4a.branch чтобы buildozer использовал системный p4a
+# p4a.branch = master
 
 # Локальный рецепт для p4a (если нужно)
 # p4a.local_recipes = ./p4a-recipes
