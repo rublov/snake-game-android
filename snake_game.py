@@ -854,7 +854,13 @@ def update_and_show_game_status():
 # gameLoop
 def gameLoop():
     """The main game loop."""
-    global game_over, game_close, paused, premium_offer_active, snake_List, Length_of_snake, x1, y1, x1_change, y1_change, foodx, foody, food_type, score, start_time, last_move_time, current_direction, change_to, speed_boost_active_until, invincible_until, mode, map_end_time, current_premium_minutes, last_mode_switch, level
+    global game_over, game_close, paused, premium_offer_active
+    global snake_List, Length_of_snake, x1, y1, x1_change, y1_change
+    global foodx, foody, food_type, score, start_time, last_move_time
+    global current_direction, change_to, speed_boost_active_until
+    global invincible_until, mode, map_end_time, current_premium_minutes
+    global last_mode_switch, level, game_state, speed_setting
+    global sound_setting, theme_setting, promo_input, played_death
     game_over = False
     game_close = False
     paused = False
@@ -1010,7 +1016,8 @@ def gameLoop():
                     if event.key == pygame.K_RETURN:
                         if promo_input in promo_codes:
                             mode = 'map'
-                            map_end_time = time.time() + promo_codes[promo_input]
+                            duration = promo_codes[promo_input]
+                            map_end_time = time.time() + duration
                             current_premium_minutes = (
                                 promo_codes[promo_input] // 60
                             )
@@ -1033,7 +1040,8 @@ def gameLoop():
 
             # Touch/Mouse events for Android and desktop
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if ANDROID or True:  # Allow mouse clicks on desktop for testing
+                # Allow mouse clicks on desktop for testing
+                if ANDROID or True:
                     mouse_x, mouse_y = event.pos
                     # Divide screen into 4 sections for directional control
                     center_x = frame_size_x / 2
@@ -1132,7 +1140,9 @@ def gameLoop():
                 leaderboard_hint_rect = leaderboard_hint_surface.get_rect(
                     center=(frame_size_x / 2, frame_size_y / 2 + 125)
                 )
-                game_window.blit(leaderboard_hint_surface, leaderboard_hint_rect)
+                game_window.blit(
+                    leaderboard_hint_surface, leaderboard_hint_rect
+                )
 
             pygame.display.update()
             fps_controller.tick(10)
@@ -1140,7 +1150,9 @@ def gameLoop():
         elif game_state == 'settings':
             game_window.fill(bg_color)
             settings_font = pygame.font.SysFont('times new roman', 40)
-            settings_surface = settings_font.render('Настройки', True, text_color)
+            settings_surface = settings_font.render(
+                'Настройки', True, text_color
+            )
             settings_rect = settings_surface.get_rect(
                 center=(frame_size_x / 2, frame_size_y / 2 - 100)
             )
@@ -1201,7 +1213,9 @@ def gameLoop():
                 'P промокод'
             ]
             for idx, line_text in enumerate(control_lines):
-                line_surface = controls_font.render(line_text, True, text_color)
+                line_surface = controls_font.render(
+                    line_text, True, text_color
+                )
                 line_rect = line_surface.get_rect()
                 line_rect.left = 50
                 line_rect.top = frame_size_y / 2 - 40 + idx * 20
@@ -1401,7 +1415,9 @@ def gameLoop():
         elif game_state == 'game_over':
             game_window.fill(bg_color)
             game_over_font = pygame.font.SysFont('times new roman', 50)
-            game_over_surface = game_over_font.render('Игра окончена', True, red)
+            game_over_surface = game_over_font.render(
+                'Игра окончена', True, red
+            )
             game_over_rect = game_over_surface.get_rect(
                 center=(frame_size_x / 2, frame_size_y / 2 - 50)
             )
@@ -1446,12 +1462,28 @@ def choose_food_type():
     config = MODE_FOOD_CONFIG.get(mode, MODE_FOOD_CONFIG['mvp'])
     
     # Calculate probabilities
-    bonus_prob = min(config['bonus']['cap'], config['bonus']['base'] + (level * config['bonus']['level']) + (score * config['bonus']['score']))
-    shield_prob = min(config['shield']['cap'], config['shield']['base'] + (level * config['shield']['level']) + (score * config['shield']['score']))
-    speed_prob = min(config['speed']['cap'], config['speed']['base'] + (level * config['speed']['level']) + (score * config['speed']['score']))
+    bonus_prob = min(
+        config['bonus']['cap'],
+        config['bonus']['base']
+        + (level * config['bonus']['level'])
+        + (score * config['bonus']['score']),
+    )
+    shield_prob = min(
+        config['shield']['cap'],
+        config['shield']['base']
+        + (level * config['shield']['level'])
+        + (score * config['shield']['score']),
+    )
+    speed_prob = min(
+        config['speed']['cap'],
+        config['speed']['base']
+        + (level * config['speed']['level'])
+        + (score * config['speed']['score']),
+    )
 
-    total_special_prob = min(config['max_total'], bonus_prob + shield_prob + speed_prob)
-    
+    # Total probability capped at max_total
+    # (bonus_prob + shield_prob + speed_prob <= config['max_total'])
+
     rand_val = rng.random()
 
     if rand_val < bonus_prob:
@@ -1466,7 +1498,8 @@ def choose_food_type():
 
 def spawn_food(force_type=None):
     """Spawns food on the screen."""
-    global food_pos, food_type, current_food_color, current_food_value, current_food_effect
+    global food_pos, food_type, current_food_color
+    global current_food_value, current_food_effect
     
     selected_type = force_type or choose_food_type()
     
@@ -1477,8 +1510,16 @@ def spawn_food(force_type=None):
     current_food_effect = food_config['effect']
 
     while True:
-        food_pos = [rng.randrange(1, (frame_size_x//10)) * 10, rng.randrange(1, (frame_size_y//10)) * 10]
-        if food_pos not in snake_body and food_pos not in [wall.topleft for wall in walls] and food_pos not in [moving['rect'].topleft for moving in moving_walls]:
+        food_pos = [
+            rng.randrange(1, (frame_size_x // 10)) * 10,
+            rng.randrange(1, (frame_size_y // 10)) * 10,
+        ]
+        if (
+            food_pos not in snake_body
+            and food_pos not in [wall.topleft for wall in walls]
+            and food_pos
+            not in [moving['rect'].topleft for moving in moving_walls]
+        ):
             break
 
 
@@ -1496,4 +1537,4 @@ def load_level(level_num):
             for i in range(5, (frame_size_x // 10) - 5):
                 walls.append(pygame.Rect(i * 10, frame_size_y // 2, 10, 10))
     elif mode == 'survival':
-        pass # No walls in survival
+        pass  # No walls in survival
