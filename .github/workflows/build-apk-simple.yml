@@ -1,0 +1,42 @@
+name: Build Android APK (Simple)
+
+on:
+  push:
+    tags:
+      - 'v*'  # Только при создании тега версии
+  workflow_dispatch:  # Ручной запуск
+
+jobs:
+  build-apk:
+    name: Build APK with Buildozer Action
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: 🔨 Build APK with Buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          workdir: .
+          buildozer_version: stable
+      
+      - name: 📤 Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snake-game-apk
+          path: ${{ steps.buildozer.outputs.filename }}
+          retention-days: 30
+      
+      - name: 🎉 Create Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ steps.buildozer.outputs.filename }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
