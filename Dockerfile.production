@@ -196,6 +196,14 @@ if [ "$CLEAN_BUILD" = "1" ]; then\n\
   echo "✅ Clean complete"\n\
 fi\n\
 \n\
+# КРИТИЧНО: Принудительно переустанавливаем sh<2.0 ПЕРЕД запуском buildozer\n\
+echo ""\n\
+echo "🔧 Fixing sh version before buildozer..."\n\
+python3 -m pip uninstall -y sh\n\
+python3 -m pip install --no-cache-dir "sh>=1.10,<2.0"\n\
+echo "✅ sh version fixed: $(python3 -c \"import sh; print(sh.__version__)\")"\n\
+echo ""\n\
+\n\
 # Запуск Buildozer\n\
 echo ""\n\
 echo "========================================"\n\
