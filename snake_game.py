@@ -356,11 +356,6 @@ def create_eat_tone():
     return generate_sound_wave(440.0, 0.1, 0.1)
 
 
-def create_move_tone():
-    """Creates a tone for snake movement."""
-    return generate_sound_wave(220.0, 0.05, 0.05)
-
-
 def create_map_mode_tone():
     """Creates a tone for map mode."""
     return generate_sound_wave(660.0, 0.15, 0.1)
@@ -587,6 +582,9 @@ current_food_value = 1
 current_food_effect = None
 food_pos = (0, 0)
 snake_pos = (0, 0)
+food_spawn = False
+direction = 'RIGHT'
+change_to = 'RIGHT'
 
 # Snake color
 snake_color = green
@@ -711,6 +709,95 @@ def refresh_premium_state():
 
     if changed:
         save_settings()
+
+
+# Initialize pygame objects
+dis = game_window
+fps_controller = pygame.time.Clock()
+
+# Game state variables
+game_state = 'menu'
+player_name = ''
+promo_input = ''
+played_death = False
+difficulty = 5
+
+
+def show_score(choice, color, font, size, *args):
+    """Display score and game status information."""
+    score_font = pygame.font.SysFont(font, size)
+    
+    if choice == 1:
+        # During gameplay - show compact status
+        mode_text, countdown, elapsed_str, effects_parts = args
+        status_parts = []
+        status_parts.append(f'Счёт:{score}')
+        if mode_text:
+            status_parts.append(mode_text)
+        if countdown:
+            status_parts.append(countdown)
+        status_parts.append(elapsed_str)
+        status_parts.extend(effects_parts)
+        status_text = ' '.join(status_parts)
+        score_surface = score_font.render(status_text, True, color)
+        score_rect = score_surface.get_rect()
+        score_rect.midtop = (frame_size_x / 2, 10)
+        game_window.blit(score_surface, score_rect)
+    else:
+        # Game over screen
+        score_surface = score_font.render(f'Счёт: {score}', True, color)
+        score_rect = score_surface.get_rect()
+        score_rect.midtop = (frame_size_x / 2, frame_size_y / 1.25)
+        game_window.blit(score_surface, score_rect)
+
+
+def message(msg, color):
+    """Display a message on the screen."""
+    mesg_font = pygame.font.SysFont('times new roman', 50)
+    mesg = mesg_font.render(msg, True, color)
+    mesg_rect = mesg.get_rect(center=(frame_size_x / 2, frame_size_y / 3))
+    game_window.blit(mesg, mesg_rect)
+
+
+def reset_game():
+    """Reset the game to initial state."""
+    global snake_pos, snake_body, food_pos, food_spawn, direction, change_to
+    global score, paused, played_death, level, walls, moving_walls
+    global wrap_edges, speed_boost_on_food, speed_boost_active_until
+    global invincible_until, premium_offer_active, difficulty, start_time
+    
+    snake_pos = [100, 50]
+    snake_body = [[100, 50], [100 - 10, 50], [100 - (2 * 10), 50]]
+    food_spawn = False
+    spawn_food()
+    direction = 'RIGHT'
+    change_to = direction
+    score = 0
+    paused = False
+    played_death = False
+    level = 1
+    walls = []
+    moving_walls = []
+    wrap_edges = False
+    speed_boost_on_food = False
+    speed_boost_active_until = 0
+    invincible_until = 0
+    premium_offer_active = False
+    load_level(level)
+    
+    # Apply settings
+    if mode in ('mvp', 'mvp2'):
+        difficulty = 5
+    else:
+        difficulty = speed_setting
+    update_music()
+    start_time = time.time()
+
+
+def toggle_pause():
+    """Toggle the game pause state."""
+    global paused
+    paused = not paused
 
 
 def update_and_show_game_status():
