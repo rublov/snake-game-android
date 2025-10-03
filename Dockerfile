@@ -45,11 +45,15 @@ RUN yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses && \
     "platforms;android-31" \
     "ndk;25.2.9519653"
 
-# Обновляем Buildozer до последней версии для исправления проблем с временными файлами
-RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir "sh<2.0" && \
-    pip3 install --no-cache-dir buildozer==1.5.0 cython==0.29.33 && \
-    pip3 install --no-cache-dir --upgrade python-for-android
+# Создаём виртуальное окружение для избежания установки как root
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Обновляем pip и устанавливаем зависимости в виртуальное окружение
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir "sh<2.0,>=1.10" && \
+    pip install --no-cache-dir buildozer==1.5.0 cython==0.29.33 && \
+    pip install --no-cache-dir --upgrade python-for-android
 
 # Рабочая директория
 WORKDIR /app
@@ -57,8 +61,8 @@ WORKDIR /app
 # Копируем файлы проекта
 COPY . /app
 
-# Устанавливаем зависимости проекта
-RUN pip3 install --no-cache-dir -r requirements-dev.txt || true
+# Устанавливаем зависимости проекта в виртуальное окружение
+RUN pip install --no-cache-dir -r requirements-dev.txt || true
 
 # Создаём каталоги для Buildozer
 RUN mkdir -p /root/.buildozer/android/platform
@@ -77,7 +81,7 @@ RUN mkdir -p /root/.cache && \
 RUN ls -la ${ANDROID_HOME}/build-tools/34.0.0/aidl || echo "AIDL not found, but continuing..."
 
 # Создаем скрипт-обертку для buildozer с улучшенной обработкой ошибок
-RUN printf '#!/bin/bash\nset -e\necho "Запуск buildozer с улучшенной обработкой ошибок..."\nexec buildozer "$@"' > /usr/local/bin/buildozer-wrapper && \
+RUN printf '#!/bin/bash\nset -e\nset -x\necho "=== Начало сборки с Buildozer ==="\necho "Python version: $(python --version)"\necho "Buildozer version: $(buildozer --version)"\necho "Working directory: $(pwd)"\necho "Available disk space:"\ndf -h\necho "=== Запуск buildozer ==="\nbuildozer "$@" 2>&1 | tee buildozer.log\nEXIT_CODE=${PIPESTATUS[0]}\nif [ $EXIT_CODE -ne 0 ]; then\n  echo "=== Buildozer завершился с ошибкой (код: $EXIT_CODE) ==="\n  echo "Последние 50 строк лога:"\n  tail -n 50 buildozer.log\n  exit $EXIT_CODE\nfi\necho "=== Сборка завершена успешно ==="\n' > /usr/local/bin/buildozer-wrapper && \
     chmod +x /usr/local/bin/buildozer-wrapper
 
 # Запускаем сборку APK с автоматическим принятием лицензий

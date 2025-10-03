@@ -43,6 +43,8 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
+          # Install sh package first to avoid conflicts with python-for-android
+          python -m pip install "sh<2.0,>=1.10"
           python -m pip install -r requirements-dev.txt
           # Runtime packages (pyjnius omitted: not required for lint/tests)
           python -m pip install kivy==2.2.1 pygame==2.6.1 newrelic
@@ -54,4 +56,4 @@ jobs:
         run: mypy . --exclude 'snake_game.py'
 
       - name: Run Pytest
-        run: pytest -q
+        run: pytest -v
