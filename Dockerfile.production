@@ -96,21 +96,13 @@ RUN yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses || true
 RUN ln -s ${ANDROID_HOME}/ndk/25.2.9519653 ${ANDROID_NDK_HOME}
 
 # ==============================================================================
-# СОЗДАНИЕ ВИРТУАЛЬНОГО ОКРУЖЕНИЯ PYTHON
+# УСТАНОВКА PYTHON ЗАВИСИМОСТЕЙ (БЕЗ VIRTUALENV)
 # ==============================================================================
+# В Docker контейнере virtualenv избыточен - используем системный Python
+# Buildozer создаст свой собственный venv при сборке APK
 
-# КРИТИЧНО: Глобально отключаем --user для pip
-# Не используем pip.conf, так как он вызывает конфликты в virtualenv
-ENV PIP_USER=0 \
-    PIP_NO_USER=1 \
-    PIP_NO_USER_CONFIG=1 \
-    PYTHONNOUSERSITE=1
-
-RUN python3 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Обновляем pip, setuptools, wheel (используем глобальные ENV и pip.conf)
-RUN pip install --no-cache-dir --upgrade \
+# Обновляем pip, setuptools, wheel
+RUN python3 -m pip install --no-cache-dir --upgrade \
     pip>=23.0 \
     setuptools>=65.0 \
     wheel>=0.38
@@ -120,16 +112,16 @@ RUN pip install --no-cache-dir --upgrade \
 # ==============================================================================
 
 # Устанавливаем Cython (важно для p4a)
-RUN pip install --no-cache-dir "Cython==0.29.33"
+RUN python3 -m pip install --no-cache-dir "Cython==0.29.33"
 
 # Устанавливаем Buildozer
-RUN pip install --no-cache-dir "buildozer==1.5.0"
+RUN python3 -m pip install --no-cache-dir "buildozer==1.5.0"
 
 # Устанавливаем python-for-android
-RUN pip install --no-cache-dir "python-for-android"
+RUN python3 -m pip install --no-cache-dir "python-for-android"
 
 # Устанавливаем дополнительные утилиты
-RUN pip install --no-cache-dir \
+RUN python3 -m pip install --no-cache-dir \
     "sh<2.0,>=1.10" \
     colorama \
     appdirs \
@@ -164,12 +156,6 @@ RUN printf '#!/bin/bash\n\
 set -e\n\
 set -x\n\
 \n\
-# CRITICAL: Disable --user for all pip commands inside buildozer\n\
-export PIP_USER=0\n\
-export PIP_NO_USER=1\n\
-export PIP_NO_USER_CONFIG=1\n\
-export PYTHONNOUSERSITE=1\n\
-\n\
 echo "========================================"\n\
 echo "🚀 BUILDOZER APK BUILD SCRIPT"\n\
 echo "========================================"\n\
@@ -177,14 +163,12 @@ echo "========================================"\n\
 # Информация о системе\n\
 echo ""\n\
 echo "📋 System Information:"\n\
-echo "  Python: $(python --version)"\n\
+echo "  Python: $(python3 --version)"\n\
 echo "  Buildozer: $(buildozer --version)"\n\
 echo "  Working Dir: $(pwd)"\n\
 echo "  Java: $JAVA_HOME"\n\
 echo "  Android SDK: $ANDROID_HOME"\n\
 echo "  Android NDK: $ANDROID_NDK_HOME"\n\
-echo "  PIP_USER: $PIP_USER"\n\
-echo "  PYTHONNOUSERSITE: $PYTHONNOUSERSITE"\n\
 echo ""\n\
 \n\
 # Проверка места на диске\n\
