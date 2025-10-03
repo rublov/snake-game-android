@@ -2,11 +2,8 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main, master, develop ]
     tags:
-      - 'v*'
-  pull_request:
-    branches: [ main, master ]
+      - 'v*'  # Только при создании тега версии
   workflow_dispatch:  # Ручной запуск
 
 jobs:
