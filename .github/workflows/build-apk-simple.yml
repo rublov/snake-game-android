@@ -12,15 +12,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     
+    env:
+      DOCKER_BUILDKIT: 0
+    
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
       
-      - name: 🔨 Build APK with Buildozer in Docker
+      - name: � Pull Buildozer Docker image
+        run: |
+          docker pull kivy/buildozer:master
+      
+      - name: �🔨 Build APK with Buildozer in Docker
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/home/user/hostcwd" \
-            kivy/buildozer:latest \
+            kivy/buildozer:master \
             bash -c "cd /home/user/hostcwd && buildozer -v android debug"
       
       - name: 📋 Show build results
