@@ -48,6 +48,8 @@ RUN yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses && \
 # Создаём виртуальное окружение для избежания установки как root
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+# Отключаем флаг --user для pip внутри virtualenv
+ENV PIP_USER=0
 
 # Обновляем pip и устанавливаем зависимости в виртуальное окружение
 RUN pip install --no-cache-dir --upgrade pip && \

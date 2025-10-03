@@ -55,6 +55,7 @@ jobs:
             -e BUILDOZER_WARN_ON_ROOT=0 \
             -e ANDROID_HOME=/opt/android-sdk \
             -e TMPDIR=/tmp \
+            -e PIP_USER=0 \
             -v ${{ github.workspace }}:/app \
             -v ${{ github.workspace }}/.buildozer:/root/.buildozer \
             -v ${{ github.workspace }}/.android:/root/.android \
