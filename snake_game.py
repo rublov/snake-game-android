@@ -285,6 +285,7 @@ background_music_available = False
 premium_offer_active = False
 missing_eat_sound_warned = False
 
+# --- Constants and Setup ---
 
 # Cache for music state to avoid redundant checks
 _music_state_cache: Dict[str, Optional[object]] = {
@@ -570,6 +571,23 @@ gold = pygame.Color(255, 215, 0)
 orange = pygame.Color(255, 140, 0)
 teal = pygame.Color(64, 224, 208)
 
+# Game state variables
+level = 1  # Initial level
+score = 0
+speed_boost_on_food = False
+speed_boost_active_until = 0
+invincible_until = 0
+snake_body = []
+walls = []
+moving_walls = []
+wrap_edges = False
+food_type = 'normal'
+current_food_color = white
+current_food_value = 1
+current_food_effect = None
+food_pos = (0, 0)
+snake_pos = (0, 0)
+
 # Snake color
 snake_color = green
 
@@ -748,861 +766,647 @@ def update_and_show_game_status():
 
 # gameLoop
 def gameLoop():
-    # ... existing code ...
+    """The main game loop."""
+    global game_over, game_close, paused, premium_offer_active, snake_List, Length_of_snake, x1, y1, x1_change, y1_change, foodx, foody, food_type, score, start_time, last_move_time, current_direction, change_to, speed_boost_active_until, invincible_until, mode, map_end_time, current_premium_minutes, last_mode_switch, level
+    game_over = False
+    game_close = False
+    paused = False
+    premium_offer_active = False
+    # Initial snake and food setup
+    x1 = frame_size_x // 2
+    y1 = frame_size_y // 2
+    snake_List = []
+    Length_of_snake = 1
+
+    # Speed and direction
+    x1_change = 0
+    y1_change = 0
+    change_to = 'STOP'
+
+    # Timers
+    start_time = time.time()
+    last_move_time = time.time()
+
+    # Effects
+    speed_boost_active_until = 0
+    invincible_until = 0
+
+    # Main game loop
     while not game_over:
         while game_close:
-            # ... existing code ...
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    # ... existing code ...
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_q:
-                        # ... existing code ...
+            dis.fill(blue)
+            message('Вы проиграли! Нажмите Q-Выход или C-Играть снова', red)
             update_and_show_game_status()
             pygame.display.update()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    game_over = True
+                    game_close = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_q:
+                        game_over = True
+                        game_close = False
+                    if event.key == pygame.K_c:
+                        reset_game()
+                        gameLoop()
 
         for event in pygame.event.get():
-            # ... existing code ...
-        if x1 >= dis_width or x1 < 0 or y1 >= dis_height or y1 < 0:
-            if invincible_until > time.time():
-                # ... existing code ...
-            else:
-                game_close = True
-        x1 += x1_change
-        y1 += y1_change
-        dis.fill(blue)
-        # ... existing code ...
-        snake_Head = []
-        snake_Head.append(x1)
-        snake_Head.append(y1)
-        snake_List.append(snake_Head)
-        if len(snake_List) > Length_of_snake:
-            del snake_List[0]
-        for x in snake_List[:-1]:
-            if x == snake_Head:
-                if invincible_until > time.time():
-                    # ... existing code ...
-                else:
-                    game_close = True
-        our_snake(snake_block, snake_List)
-        update_and_show_game_status()
-        pygame.display.update()
-        if x1 == foodx and y1 == foody:
-            # ... existing code ...
-        # Main logic
-RUN_GAME_LOOP = os.environ.get('SNAKE_GAME_SKIP_LOOP') != '1'
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
 
-while RUN_GAME_LOOP:
-    # Android lifecycle management
-    if ANDROID:
-        if android.check_pause():
-            android.wait_for_resume()
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        elif event.type == pygame.KEYDOWN:
-            if game_state == 'menu':
-                if event.key == pygame.K_SPACE:
-                    reset_game()
-                    game_state = 'playing'
-                elif event.key in (pygame.K_LEFT, pygame.K_a):
-                    if mode != 'mvp':
-                        mode = 'mvp'
-                        last_mode_switch = time.time()
-                        update_colors()
+            elif event.type == pygame.KEYDOWN:
+                if game_state == 'menu':
+                    if event.key == pygame.K_SPACE:
+                        reset_game()
+                        game_state = 'playing'
+                    elif event.key in (pygame.K_LEFT, pygame.K_a):
+                        if mode != 'mvp':
+                            mode = 'mvp'
+                            last_mode_switch = time.time()
+                            update_colors()
+                            save_settings()
+                    elif event.key in (pygame.K_RIGHT, pygame.K_d):
+                        if mode != 'mvp2':
+                            mode = 'mvp2'
+                            last_mode_switch = time.time()
+                            update_colors()
+                            save_settings()
+                    elif event.key == pygame.K_s:
+                        game_state = 'settings'
+                    elif event.key == pygame.K_l:
+                        if LEADERBOARD_AVAILABLE:
+                            game_state = 'leaderboard'
+                elif game_state == 'playing':
+                    if premium_offer_active:
+                        if event.key in (pygame.K_y, pygame.K_RETURN):
+                            duration = 5 * 60
+                            mode = 'map'
+                            map_end_time = time.time() + duration
+                            current_premium_minutes = duration // 60
+                            last_mode_switch = time.time()
+                            update_colors()
+                            load_level(level)
+                            save_settings()
+                            premium_offer_active = False
+                            paused = False
+                        elif event.key in (
+                            pygame.K_n,
+                            pygame.K_SPACE,
+                            pygame.K_ESCAPE,
+                        ):
+                            premium_offer_active = False
+                            paused = False
+                        # This continue is correct for the event loop
+                        continue
+                    # W -> Up; S -> Down; A -> Left; D -> Right
+                    if event.key == pygame.K_UP or event.key == ord('w'):
+                        change_to = 'UP'
+                    if event.key == pygame.K_DOWN or event.key == ord('s'):
+                        change_to = 'DOWN'
+                    if event.key == pygame.K_LEFT or event.key == ord('a'):
+                        change_to = 'LEFT'
+                    if event.key == pygame.K_RIGHT or event.key == ord('d'):
+                        change_to = 'RIGHT'
+                    # Esc -> Go to menu
+                    if event.key == pygame.K_ESCAPE:
+                        game_state = 'menu'
+                    # Q -> Quit immediately
+                    if event.key == pygame.K_q:
+                        pygame.quit()
+                        sys.exit()
+                    # P -> Pause/Resume
+                    if event.key == pygame.K_p:
+                        toggle_pause()
+                elif game_state == 'settings':
+                    if event.key == pygame.K_ESCAPE:
+                        game_state = 'menu'
+                    elif event.key == pygame.K_UP:
+                        if speed_setting < 120:
+                            speed_setting += 5
+                            save_settings()
+                    elif event.key == pygame.K_DOWN:
+                        if speed_setting > 5:
+                            speed_setting -= 5
+                            save_settings()
+                    elif event.key == pygame.K_s:
+                        sound_setting = not sound_setting
                         save_settings()
-                elif event.key in (pygame.K_RIGHT, pygame.K_d):
-                    if mode != 'mvp2':
-                        mode = 'mvp2'
-                        last_mode_switch = time.time()
-                        update_colors()
-                        save_settings()
-                elif event.key == pygame.K_s:
-                    game_state = 'settings'
-                elif event.key == pygame.K_l:
-                    if LEADERBOARD_AVAILABLE:
-                        game_state = 'leaderboard'
-            elif game_state == 'playing':
-                if premium_offer_active:
-                    if event.key in (pygame.K_y, pygame.K_RETURN):
-                        duration = 5 * 60
-                        mode = 'map'
-                        map_end_time = time.time() + duration
-                        current_premium_minutes = duration // 60
-                        last_mode_switch = time.time()
-                        update_colors()
-                        load_level(level)
-                        save_settings()
-                        premium_offer_active = False
-                        paused = False
-                    elif event.key in (
-                        pygame.K_n,
-                        pygame.K_SPACE,
-                        pygame.K_ESCAPE,
-                    ):
-                        premium_offer_active = False
-                        paused = False
-                    continue
-                # W -> Up; S -> Down; A -> Left; D -> Right
-                if event.key == pygame.K_UP or event.key == ord('w'):
-                    change_to = 'UP'
-                if event.key == pygame.K_DOWN or event.key == ord('s'):
-                    change_to = 'DOWN'
-                if event.key == pygame.K_LEFT or event.key == ord('a'):
-                    change_to = 'LEFT'
-                if event.key == pygame.K_RIGHT or event.key == ord('d'):
-                    change_to = 'RIGHT'
-                # Esc -> Go to menu
-                if event.key == pygame.K_ESCAPE:
-                    game_state = 'menu'
-                # Q -> Quit immediately
-                if event.key == pygame.K_q:
-                    pygame.quit()
-                    sys.exit()
-                # P -> Pause/Resume
-                if event.key == pygame.K_p:
-                    paused = not paused
-                # + -> Increase speed
-                if event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
-                    difficulty += 5
-                # - -> Decrease speed
-                if event.key == pygame.K_MINUS:
-                    if difficulty > 5:
-                        difficulty -= 5
-            elif game_state == 'game_over':
-                if event.key == pygame.K_r:
-                    reset_game()
-                    game_state = 'playing'
-                elif event.key == pygame.K_q:
-                    pygame.quit()
-                    sys.exit()
-                elif event.key == pygame.K_ESCAPE:
-                    game_state = 'menu'
-            elif game_state == 'settings':
-                if event.key == pygame.K_UP:
-                    if speed_setting < 120:
-                        speed_setting += 5
-                        save_settings()
-                elif event.key == pygame.K_DOWN:
-                    if speed_setting > 5:
-                        speed_setting -= 5
-                        save_settings()
-                elif event.key == pygame.K_s:
-                    sound_setting = not sound_setting
-                    save_settings()
-                    update_music()
-                elif event.key == pygame.K_t:
-                    theme_setting = (
-                        'light' if theme_setting == 'dark' else 'dark'
-                    )
-                    save_settings()
-                    update_colors()
-                elif event.key == pygame.K_m:
-                    premium_active = (
-                        map_end_time > 0 and time.time() <= map_end_time
-                    )
-                    available_modes = ['mvp', 'mvp2', 'survival']
-                    if premium_active:
-                        available_modes.append('map')
-                    if mode not in available_modes:
-                        mode = available_modes[0]
-                    else:
-                        current_index = available_modes.index(mode)
-                        mode = available_modes[
-                            (current_index + 1) % len(available_modes)
-                        ]
-                    update_colors()
-                    save_settings()
-                elif event.key == pygame.K_p:
-                    game_state = 'promo'
-                elif event.key == pygame.K_ESCAPE:
-                    game_state = 'menu'
-            elif game_state == 'promo':
-                if event.key == pygame.K_RETURN:
-                    if promo_input in promo_codes:
-                        mode = 'map'
-                        map_end_time = time.time() + promo_codes[promo_input]
-                        current_premium_minutes = (
-                            promo_codes[promo_input] // 60
+                        update_music()
+                    elif event.key == pygame.K_t:
+                        theme_setting = (
+                            'light' if theme_setting == 'dark' else 'dark'
                         )
                         save_settings()
                         update_colors()
+                    elif event.key == pygame.K_m:
+                        premium_active = (
+                            map_end_time > 0 and time.time() <= map_end_time
+                        )
+                        available_modes = ['mvp', 'mvp2', 'survival']
+                        if premium_active:
+                            available_modes.append('map')
+                        if mode not in available_modes:
+                            mode = available_modes[0]
+                        else:
+                            current_index = available_modes.index(mode)
+                            mode = available_modes[
+                                (current_index + 1) % len(available_modes)
+                            ]
+                        update_colors()
+                        save_settings()
+                    elif event.key == pygame.K_p:
+                        game_state = 'promo'
+                    elif event.key == pygame.K_ESCAPE:
+                        game_state = 'menu'
+                elif game_state == 'promo':
+                    if event.key == pygame.K_RETURN:
+                        if promo_input in promo_codes:
+                            mode = 'map'
+                            map_end_time = time.time() + promo_codes[promo_input]
+                            current_premium_minutes = (
+                                promo_codes[promo_input] // 60
+                            )
+                            save_settings()
+                            update_colors()
+                            promo_input = ''
+                            game_state = 'settings'
+                        else:
+                            promo_input = ''  # Invalid code
+                    elif event.key == pygame.K_BACKSPACE:
+                        promo_input = promo_input[:-1]
+                    elif event.key == pygame.K_ESCAPE:
                         promo_input = ''
                         game_state = 'settings'
                     else:
-                        promo_input = ''  # Invalid code
-                elif event.key == pygame.K_BACKSPACE:
-                    promo_input = promo_input[:-1]
-                elif event.key == pygame.K_ESCAPE:
-                    promo_input = ''
-                    game_state = 'settings'
-                else:
-                    promo_input += event.unicode
-            elif game_state == 'leaderboard':
-                if event.key == pygame.K_ESCAPE:
-                    game_state = 'menu'
+                        promo_input += event.unicode
+                elif game_state == 'leaderboard':
+                    if event.key == pygame.K_ESCAPE:
+                        game_state = 'menu'
 
-        # Touch/Mouse events for Android and desktop
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if ANDROID or True:  # Allow mouse clicks on desktop for testing
-                mouse_x, mouse_y = event.pos
-                # Divide screen into 4 sections for directional control
-                center_x = frame_size_x / 2
-                center_y = frame_size_y / 2
+            # Touch/Mouse events for Android and desktop
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if ANDROID or True:  # Allow mouse clicks on desktop for testing
+                    mouse_x, mouse_y = event.pos
+                    # Divide screen into 4 sections for directional control
+                    center_x = frame_size_x / 2
+                    center_y = frame_size_y / 2
 
-                if game_state == 'menu':
-                    # Touch anywhere to start
-                    reset_game()
-                    game_state = 'playing'
-                elif game_state == 'playing' and not premium_offer_active:
-                    # Determine swipe direction based on touch position
-                    dx = mouse_x - center_x
-                    dy = mouse_y - center_y
+                    if game_state == 'menu':
+                        # Touch anywhere to start
+                        reset_game()
+                        game_state = 'playing'
+                    elif game_state == 'playing' and not premium_offer_active:
+                        # Determine swipe direction based on touch position
+                        dx = mouse_x - center_x
+                        dy = mouse_y - center_y
 
-                    if abs(dx) > abs(dy):
-                        # Horizontal swipe
-                        if dx > 0:
-                            change_to = 'RIGHT'
+                        if abs(dx) > abs(dy):
+                            # Horizontal swipe
+                            if dx > 0:
+                                change_to = 'RIGHT'
+                            else:
+                                change_to = 'LEFT'
                         else:
-                            change_to = 'LEFT'
-                    else:
-                        # Vertical swipe
-                        if dy > 0:
-                            change_to = 'DOWN'
-                        else:
-                            change_to = 'UP'
-                elif game_state == 'game_over':
-                    # Touch to restart
-                    reset_game()
-                    game_state = 'playing'
+                            # Vertical swipe
+                            if dy > 0:
+                                change_to = 'DOWN'
+                            else:
+                                change_to = 'UP'
+                    elif game_state == 'game_over':
+                        # Touch to restart
+                        reset_game()
+                        game_state = 'playing'
 
-    refresh_premium_state()
-    update_music()
-
-    if game_state == 'menu':
-        game_window.fill(bg_color)
-        title_font = pygame.font.SysFont('times new roman', 50)
-        title_surface = title_font.render('Змейка', True, text_color)
-        title_rect = title_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 - 50))
-        game_window.blit(title_surface, title_rect)
-        mode_font = pygame.font.SysFont('times new roman', 25)
-        if mode == 'map':
-            mode_text = f'Премиум{current_premium_minutes}'
-        elif mode == 'survival':
-            mode_text = 'Выживание'
-        elif mode == 'mvp2':
-            mode_text = 'Классика2'
-        else:
-            mode_text = 'Классика'
-        mode_surface = mode_font.render(
-            f'Режим: {mode_text}',
-            True,
-            text_color,
-        )
-        mode_rect = mode_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 - 10)
-        )
-        game_window.blit(mode_surface, mode_rect)
-        start_font = pygame.font.SysFont('times new roman', 30)
-        start_text = 'Нажмите ПРОБЕЛ для начала'
-        start_surface = start_font.render(start_text, True, green)
-        start_rect = start_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 + 20))
-        game_window.blit(start_surface, start_rect)
-        mode_hint_font = pygame.font.SysFont('times new roman', 22)
-        mode_hint_text = '←/→ для выбора: Классика / Классика2'
-        mode_hint_surface = mode_hint_font.render(
-            mode_hint_text,
-            True,
-            text_color,
-        )
-        mode_hint_rect = mode_hint_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 + 55)
-        )
-        game_window.blit(mode_hint_surface, mode_hint_rect)
-        settings_hint_font = pygame.font.SysFont('times new roman', 25)
-        settings_hint_text = 'Нажмите S для настроек'
-        settings_hint_surface = settings_hint_font.render(
-            settings_hint_text, True, text_color
-        )
-        settings_hint_rect = settings_hint_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 + 90)
-        )
-        game_window.blit(settings_hint_surface, settings_hint_rect)
-
-        # Leaderboard hint
-        if LEADERBOARD_AVAILABLE:
-            leaderboard_hint_font = pygame.font.SysFont(
-                'times new roman', 25
-            )
-            leaderboard_hint_text = 'Нажмите L для таблицы лидеров'
-            leaderboard_hint_surface = leaderboard_hint_font.render(
-                leaderboard_hint_text, True, green
-            )
-            leaderboard_hint_rect = leaderboard_hint_surface.get_rect(
-                center=(frame_size_x / 2, frame_size_y / 2 + 125)
-            )
-            game_window.blit(leaderboard_hint_surface, leaderboard_hint_rect)
-
-        pygame.display.update()
-        fps_controller.tick(10)
+        refresh_premium_state()
         update_music()
-    elif game_state == 'settings':
-        game_window.fill(bg_color)
-        settings_font = pygame.font.SysFont('times new roman', 40)
-        settings_surface = settings_font.render('Настройки', True, text_color)
-        settings_rect = settings_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 - 100)
-        )
-        game_window.blit(settings_surface, settings_rect)
-        speed_font = pygame.font.SysFont('times new roman', 30)
-        speed_surface = speed_font.render(
-            f'Скорость: {speed_setting}',
-            True,
-            green,
-        )
-        speed_rect = speed_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 - 40)
-        )
-        game_window.blit(speed_surface, speed_rect)
-        sound_font = pygame.font.SysFont('times new roman', 30)
-        sound_text = 'Звук: Вкл' if sound_setting else 'Звук: Выкл'
-        sound_surface = sound_font.render(sound_text, True, green)
-        sound_rect = sound_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2)
-        )
-        game_window.blit(sound_surface, sound_rect)
-        theme_font = pygame.font.SysFont('times new roman', 30)
-        theme_status = "Светлая" if theme_setting == "light" else "Тёмная"
-        theme_text = f'Тема: {theme_status}'
-        theme_surface = theme_font.render(
-            theme_text,
-            True,
-            green,
-        )
-        theme_rect = theme_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 + 40)
-        )
-        game_window.blit(theme_surface, theme_rect)
-        mode_font = pygame.font.SysFont('times new roman', 30)
-        premium_active = map_end_time > 0 and time.time() <= map_end_time
-        mode_label_map = {
-            'mvp': 'Классика',
-            'mvp2': 'Классика2',
-            'survival': 'Выживание',
-            'map': 'Премиум',
-        }
-        current_mode_label = mode_label_map.get(mode, 'Классика')
-        if mode == 'map' and not premium_active:
-            current_mode_label = 'Премиум (нет доступа)'
-        mode_text_line = f'Режим: {current_mode_label}'
-        mode_surface = mode_font.render(mode_text_line, True, green)
-        mode_rect = mode_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 + 80)
-        )
-        game_window.blit(mode_surface, mode_rect)
 
-        # Управление в левом верхнем углу построчно
-        controls_font = pygame.font.SysFont('times new roman', 18)
-        control_lines = [
-            '↑/↓ скорость',
-            'S звук',
-            'T тема',
-            'P промокод'
-        ]
-        for idx, line_text in enumerate(control_lines):
-            line_surface = controls_font.render(line_text, True, text_color)
-            line_rect = line_surface.get_rect()
-            line_rect.left = 50
-            line_rect.top = frame_size_y / 2 - 40 + idx * 20
-            game_window.blit(line_surface, line_rect)
-
-        autosave_font = pygame.font.SysFont('times new roman', 18)
-        autosave_text = 'Изменения сохраняются автоматически.'
-        autosave_surface = autosave_font.render(
-            autosave_text,
-            True,
-            text_color,
-        )
-        autosave_rect = autosave_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 + 122)
-        )
-        game_window.blit(autosave_surface, autosave_rect)
-        tip_font = pygame.font.SysFont('times new roman', 18)
-        tip_lines = [
-            ('+5 очков', gold),
-            ('щит 6с', teal),
-            ('быстрее 5с', orange),
-        ]
-        for idx, (line_text, line_color) in enumerate(tip_lines):
-            line_surface = tip_font.render(line_text, True, line_color)
-            line_rect = line_surface.get_rect()
-            line_rect.right = frame_size_x - 50
-            line_rect.top = frame_size_y / 2 - 40 + idx * 20
-            game_window.blit(line_surface, line_rect)
-        exit_font = pygame.font.SysFont('times new roman', 20)
-        exit_text = 'ESC: Выйти из настроек'
-        exit_surface = exit_font.render(
-            exit_text,
-            True,
-            text_color,
-        )
-        exit_rect = exit_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 + 180)
-        )
-        game_window.blit(exit_surface, exit_rect)
-        pygame.display.update()
-        fps_controller.tick(10)
-    elif game_state == 'promo':
-        game_window.fill(bg_color)
-        promo_font = pygame.font.SysFont('times new roman', 40)
-        promo_surface = promo_font.render(
-            'Введите промокод:',
-            True,
-            text_color,
-        )
-        promo_rect = promo_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 - 50)
-        )
-        game_window.blit(promo_surface, promo_rect)
-        input_font = pygame.font.SysFont('times new roman', 30)
-        input_surface = input_font.render(promo_input, True, text_color)
-        input_rect = input_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2)
-        )
-        game_window.blit(input_surface, input_rect)
-        pygame.draw.rect(
-            game_window,
-            text_color,
-            input_rect.inflate(20, 10),
-            2,
-        )  # Border for input field
-        hint_font = pygame.font.SysFont('times new roman', 20)
-        hint_surface = hint_font.render(
-            'Enter: Подтвердить, Esc: Отмена',
-            True,
-            text_color,
-        )
-        hint_rect = hint_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 + 50)
-        )
-        game_window.blit(hint_surface, hint_rect)
-        pygame.display.update()
-        fps_controller.tick(10)
-        update_music()
-    elif game_state == 'leaderboard':
-        game_window.fill(bg_color)
-        title_font = pygame.font.SysFont('times new roman', 45)
-        title_surface = title_font.render(
-            'Таблица лидеров', True, text_color
-        )
-        title_rect = title_surface.get_rect(
-            center=(frame_size_x / 2, 50)
-        )
-        game_window.blit(title_surface, title_rect)
-
-        # Get leaderboard data
-        try:
-            top_scores = leaderboard.get_leaderboard(mode=None, limit=10)
-            status_font = pygame.font.SysFont('times new roman', 18)
-            status_text = "🌐 Online" if leaderboard.online else "💾 Offline"
-            status_surface = status_font.render(
-                status_text, True, green if leaderboard.online else orange
-            )
-            status_rect = status_surface.get_rect()
-            status_rect.topright = (frame_size_x - 20, 20)
-            game_window.blit(status_surface, status_rect)
-        except Exception as e:
-            logging.error(f"Failed to load leaderboard: {e}")
-            top_scores = []
-
-        # Display scores
-        if top_scores:
-            entry_font = pygame.font.SysFont('times new roman', 24)
-            y_offset = 110
-            for i, entry in enumerate(top_scores, 1):
-                rank = f"{i}."
-                name = entry.get('name', 'Unknown')[:15]
-                score_val = entry.get('score', 0)
-                mode_val = entry.get('mode', 'mvp')
-
-                # Highlight current player
-                if name == player_name:
-                    color = gold
-                else:
-                    color = text_color
-
-                text = f"{rank:3} {name:15} {score_val:5} [{mode_val}]"
-                entry_surface = entry_font.render(text, True, color)
-                entry_rect = entry_surface.get_rect(
-                    center=(frame_size_x / 2, y_offset)
-                )
-                game_window.blit(entry_surface, entry_rect)
-                y_offset += 32
-        else:
-            no_data_font = pygame.font.SysFont('times new roman', 25)
-            no_data_surface = no_data_font.render(
-                'Нет данных', True, text_color
-            )
-            no_data_rect = no_data_surface.get_rect(
-                center=(frame_size_x / 2, frame_size_y / 2)
-            )
-            game_window.blit(no_data_surface, no_data_rect)
-
-        # Hint
-        hint_font = pygame.font.SysFont('times new roman', 20)
-        hint_surface = hint_font.render(
-            'ESC: Вернуться в меню', True, text_color
-        )
-        hint_rect = hint_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y - 30)
-        )
-        game_window.blit(hint_surface, hint_rect)
-
-        pygame.display.update()
-        fps_controller.tick(10)
-    elif game_state == 'playing':
-        if premium_offer_active:
+        if game_state == 'menu':
             game_window.fill(bg_color)
-            for pos in snake_body:
-                segment_rect = pygame.Rect(pos[0], pos[1], 10, 10)
-                pygame.draw.rect(game_window, snake_color, segment_rect)
-            food_rect = pygame.Rect(food_pos[0], food_pos[1], 10, 10)
-            pygame.draw.rect(game_window, current_food_color, food_rect)
-            for wall_rect in walls:
-                pygame.draw.rect(game_window, wall_color, wall_rect)
-            for moving in moving_walls:
-                pygame.draw.rect(game_window, wall_color, moving['rect'])
+            title_font = pygame.font.SysFont('times new roman', 50)
+            title_surface = title_font.render('Змейка', True, text_color)
+            title_rect = title_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 - 50))
+            game_window.blit(title_surface, title_rect)
+            mode_font = pygame.font.SysFont('times new roman', 25)
+            if mode == 'map':
+                mode_text = f'Премиум{current_premium_minutes}'
+            elif mode == 'survival':
+                mode_text = 'Выживание'
+            elif mode == 'mvp2':
+                mode_text = 'Классика2'
+            else:
+                mode_text = 'Классика'
+            mode_surface = mode_font.render(
+                f'Режим: {mode_text}',
+                True,
+                text_color,
+            )
+            mode_rect = mode_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 - 10)
+            )
+            game_window.blit(mode_surface, mode_rect)
+            start_font = pygame.font.SysFont('times new roman', 30)
+            start_text = 'Нажмите ПРОБЕЛ для начала'
+            start_surface = start_font.render(start_text, True, green)
+            start_rect = start_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 + 20))
+            game_window.blit(start_surface, start_rect)
+            mode_hint_font = pygame.font.SysFont('times new roman', 22)
+            mode_hint_text = '←/→ для выбора: Классика / Классика2'
+            mode_hint_surface = mode_hint_font.render(
+                mode_hint_text,
+                True,
+                text_color,
+            )
+            mode_hint_rect = mode_hint_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 + 55)
+            )
+            game_window.blit(mode_hint_surface, mode_hint_rect)
+            settings_hint_font = pygame.font.SysFont('times new roman', 25)
+            settings_hint_text = 'Нажмите S для настроек'
+            settings_hint_surface = settings_hint_font.render(
+                settings_hint_text, True, text_color
+            )
+            settings_hint_rect = settings_hint_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 + 90)
+            )
+            game_window.blit(settings_hint_surface, settings_hint_rect)
 
-            update_and_show_game_status()
+            # Leaderboard hint
+            if LEADERBOARD_AVAILABLE:
+                leaderboard_hint_font = pygame.font.SysFont(
+                    'times new roman', 25
+                )
+                leaderboard_hint_text = 'Нажмите L для таблицы лидеров'
+                leaderboard_hint_surface = leaderboard_hint_font.render(
+                    leaderboard_hint_text, True, green
+                )
+                leaderboard_hint_rect = leaderboard_hint_surface.get_rect(
+                    center=(frame_size_x / 2, frame_size_y / 2 + 125)
+                )
+                game_window.blit(leaderboard_hint_surface, leaderboard_hint_rect)
 
-            prompt_font = pygame.font.SysFont('times new roman', 36)
-            prompt_surface = prompt_font.render(
-                'Открыть "Премиум5"? (Y — да, N — нет)',
+            pygame.display.update()
+            fps_controller.tick(10)
+            update_music()
+        elif game_state == 'settings':
+            game_window.fill(bg_color)
+            settings_font = pygame.font.SysFont('times new roman', 40)
+            settings_surface = settings_font.render('Настройки', True, text_color)
+            settings_rect = settings_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 - 100)
+            )
+            game_window.blit(settings_surface, settings_rect)
+            speed_font = pygame.font.SysFont('times new roman', 30)
+            speed_surface = speed_font.render(
+                f'Скорость: {speed_setting}',
                 True,
                 green,
             )
-            prompt_rect = prompt_surface.get_rect(
-                center=(frame_size_x / 2, frame_size_y / 2 - 20)
+            speed_rect = speed_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 - 40)
             )
-            game_window.blit(prompt_surface, prompt_rect)
-            detail_font = pygame.font.SysFont('times new roman', 24)
-            detail_surface = detail_font.render(
-                'Премиум5: стены, бонусы и музыка на 5 минут.',
+            game_window.blit(speed_surface, speed_rect)
+            sound_font = pygame.font.SysFont('times new roman', 30)
+            sound_text = 'Звук: Вкл' if sound_setting else 'Звук: Выкл'
+            sound_surface = sound_font.render(sound_text, True, green)
+            sound_rect = sound_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2)
+            )
+            game_window.blit(sound_surface, sound_rect)
+            theme_font = pygame.font.SysFont('times new roman', 30)
+            theme_status = "Светлая" if theme_setting == "light" else "Тёмная"
+            theme_text = f'Тема: {theme_status}'
+            theme_surface = theme_font.render(
+                theme_text,
                 True,
-                text_color,
+                green,
             )
-            detail_rect = detail_surface.get_rect(
-                center=(frame_size_x / 2, frame_size_y / 2 + 20)
+            theme_rect = theme_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 + 40)
             )
-            game_window.blit(detail_surface, detail_rect)
-            decline_surface = detail_font.render(
-                'N / пробел / Esc — продолжить классику.',
-                True,
-                text_color,
+            game_window.blit(theme_surface, theme_rect)
+            mode_font = pygame.font.SysFont('times new roman', 30)
+            premium_active = map_end_time > 0 and time.time() <= map_end_time
+            mode_label_map = {
+                'mvp': 'Классика',
+                'mvp2': 'Классика2',
+                'survival': 'Выживание',
+                'map': 'Премиум',
+            }
+            current_mode_label = mode_label_map.get(mode, 'Классика')
+            if mode == 'map' and not premium_active:
+                current_mode_label = 'Премиум (нет доступа)'
+            mode_text_line = f'Режим: {current_mode_label}'
+            mode_surface = mode_font.render(mode_text_line, True, green)
+            mode_rect = mode_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 + 80)
             )
-            decline_rect = decline_surface.get_rect(
-                center=(frame_size_x / 2, frame_size_y / 2 + 50)
-            )
-            game_window.blit(decline_surface, decline_rect)
+            game_window.blit(mode_surface, mode_rect)
 
+            # Управление в левом верхнем углу построчно
+            controls_font = pygame.font.SysFont('times new roman', 18)
+            control_lines = [
+                '↑/↓ скорость',
+                'S звук',
+                'T тема',
+                'P промокод'
+            ]
+            for idx, line_text in enumerate(control_lines):
+                line_surface = controls_font.render(line_text, True, text_color)
+                line_rect = line_surface.get_rect()
+                line_rect.left = 50
+                line_rect.top = frame_size_y / 2 - 40 + idx * 20
+                game_window.blit(line_surface, line_rect)
+
+            autosave_font = pygame.font.SysFont('times new roman', 18)
+            autosave_text = 'Изменения сохраняются автоматически.'
+            autosave_surface = autosave_font.render(
+                autosave_text,
+                True,
+                text_color,
+            )
+            autosave_rect = autosave_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 + 122)
+            )
+            game_window.blit(autosave_surface, autosave_rect)
+            tip_font = pygame.font.SysFont('times new roman', 18)
+            tip_lines = [
+                ('+5 очков', gold),
+                ('щит 6с', teal),
+                ('быстрее 5с', orange),
+            ]
+            for idx, (line_text, line_color) in enumerate(tip_lines):
+                line_surface = tip_font.render(line_text, True, line_color)
+                line_rect = line_surface.get_rect()
+                line_rect.right = frame_size_x - 50
+                line_rect.top = frame_size_y / 2 - 40 + idx * 20
+                game_window.blit(line_surface, line_rect)
+            exit_font = pygame.font.SysFont('times new roman', 20)
+            exit_text = 'ESC: Выйти из настроек'
+            exit_surface = exit_font.render(
+                exit_text,
+                True,
+                text_color,
+            )
+            exit_rect = exit_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 + 180)
+            )
+            game_window.blit(exit_surface, exit_rect)
             pygame.display.update()
             fps_controller.tick(10)
-            continue
-
-        if not paused:
-            # Prevent opposite direction movement
-            change_direction = False  # Флаг изменения направления
-
-            if change_to == 'UP' and direction != 'DOWN':
-                if direction != 'UP':  # Направление изменилось
-                    change_direction = True
-                direction = 'UP'
-            if change_to == 'DOWN' and direction != 'UP':
-                if direction != 'DOWN':  # Направление изменилось
-                    change_direction = True
-                direction = 'DOWN'
-            if change_to == 'LEFT' and direction != 'RIGHT':
-                if direction != 'LEFT':  # Направление изменилось
-                    change_direction = True
-                direction = 'LEFT'
-            if change_to == 'RIGHT' and direction != 'LEFT':
-                if direction != 'RIGHT':  # Направление изменилось
-                    change_direction = True
-                direction = 'RIGHT'
-
-            update_moving_walls()
-
-            # Moving the snake
-            if direction == 'UP':
-                snake_pos[1] -= 10
-            if direction == 'DOWN':
-                snake_pos[1] += 10
-            if direction == 'LEFT':
-                snake_pos[0] -= 10
-            if direction == 'RIGHT':
-                snake_pos[0] += 10
-
-            # Простая логика звука движения для режима mvp2
-            if (
-                mode == 'mvp2'
-                and sound_enabled
-                and move_sound
-                and change_direction
-            ):
-                # Воспроизведение только при изменении направления
-                if move_sound_channel and move_sound_channel.get_busy():
-                    move_sound_channel.stop()
-                move_sound_channel = move_sound.play()
-
-            if wrap_edges:
-                if snake_pos[0] < 0:
-                    snake_pos[0] = frame_size_x - 10
-                elif snake_pos[0] >= frame_size_x:
-                    snake_pos[0] = 0
-                if snake_pos[1] < 0:
-                    snake_pos[1] = frame_size_y - 10
-                elif snake_pos[1] >= frame_size_y:
-                    snake_pos[1] = 0
-            elif invincible_until > time.time():
-                snake_pos[0] = max(0, min(snake_pos[0], frame_size_x - 10))
-                snake_pos[1] = max(0, min(snake_pos[1], frame_size_y - 10))
-
-            # Snake body growing mechanism
-            snake_body.insert(0, list(snake_pos))
-            if snake_pos[0] == food_pos[0] and snake_pos[1] == food_pos[1]:
-                score += current_food_value
-                if mode == 'mvp2' and score % 10 == 0:
-                    difficulty += 5
-                    if sound_enabled and level_up_sound:
-                        level_up_sound.play()
-                if sound_enabled:
-                    if eat_sound:
-                        eat_sound.play()
-                    elif not missing_eat_sound_warned:
-                        logging.warning(
-                            'Eat sound playback requested but '
-                            'sound object is missing'
-                        )
-                        missing_eat_sound_warned = True
-                food_spawn = False
-                effect_time = time.time()
-                speed_effect = (
-                    speed_boost_on_food or current_food_effect == 'speed'
-                )
-                if speed_effect:
-                    speed_boost_active_until = max(
-                        speed_boost_active_until,
-                        effect_time + SPEED_BOOST_DURATION,
-                    )
-                if current_food_effect == 'shield':
-                    invincible_until = max(
-                        invincible_until,
-                        effect_time + INVINCIBLE_DURATION,
-                    )
-                # Level up every 10 points
-                if score % 10 == 0:
-                    if mode == 'map':
-                        level_cap = MAX_MAP_LEVEL
-                    elif mode == 'survival':
-                        level_cap = MAX_SURVIVAL_LEVEL
-                    else:
-                        load_level(level)
-                        if mode == 'survival':
-                            difficulty += SURVIVAL_SPEED_INCREMENT
-                        # MVP has no level up
-                            if (
-                                level >= 4
-                                and not premium_offer_active
-                            ):
-                                premium_offer_active = True
-                                paused = False
-                        if sound_enabled and level_up_sound:
-                            level_up_sound.play()
-            else:
-                snake_body.pop()
-
-            # Spawning food on the screen
-            if not food_spawn:
-                spawn_food()
-
-            # GFX
+        elif game_state == 'promo':
             game_window.fill(bg_color)
-            for pos in snake_body:
-                # Snake body
-                # .draw.rect(play_surface, color, xy-coordinate)
-                # xy-coordinate -> .Rect(x, y, size_x, size_y)
-                pygame.draw.rect(game_window, snake_color,
-                                 pygame.Rect(pos[0], pos[1], 10, 10))
-
-            # Snake food
+            promo_font = pygame.font.SysFont('times new roman', 40)
+            promo_surface = promo_font.render(
+                'Введите промокод:',
+                True,
+                text_color,
+            )
+            promo_rect = promo_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 - 50)
+            )
+            game_window.blit(promo_surface, promo_rect)
+            input_font = pygame.font.SysFont('times new roman', 30)
+            input_surface = input_font.render(promo_input, True, text_color)
+            input_rect = input_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2)
+            )
+            game_window.blit(input_surface, input_rect)
             pygame.draw.rect(
                 game_window,
-                current_food_color,
-                pygame.Rect(food_pos[0], food_pos[1], 10, 10),
-            )
-
-            # Walls
-            for wall_rect in walls:
-                pygame.draw.rect(game_window, wall_color, wall_rect)
-            for moving in moving_walls:
-                pygame.draw.rect(game_window, wall_color, moving['rect'])
-
-            # Game Over conditions
-            # Getting out of bounds
-            invincible_active = invincible_until > time.time()
-            if not wrap_edges and not invincible_active:
-                if snake_pos[0] < 0 or snake_pos[0] > frame_size_x - 10:
-                    game_over()
-                if snake_pos[1] < 0 or snake_pos[1] > frame_size_y - 10:
-                    game_over()
-            # Touching the snake body
-            for block in snake_body[1:]:
-                if (
-                    not invincible_active
-                    and snake_pos[0] == block[0]
-                    and snake_pos[1] == block[1]
-                ):
-                    game_over()
-            # Touching the walls
-            snake_head_rect = pygame.Rect(snake_pos[0], snake_pos[1], 10, 10)
-            for wall_rect in iter_wall_rects():
-                if (
-                    not invincible_active
-                    and snake_head_rect.colliderect(wall_rect)
-                ):
-                    game_over()
-
-            update_and_show_game_status()
-            # Show premium expiry message when premium ends
-            now = time.time()
-            if premium_expiry_message_until > now:
-                expiry_font = pygame.font.SysFont('times new roman', 30)
-                expiry_surface = expiry_font.render(
-                    '"Премиум" закончился.',
-                    True,
-                    red,
-                )
-                expiry_rect = expiry_surface.get_rect(
-                    center=(frame_size_x / 2, frame_size_y / 2)
-                )
-                game_window.blit(expiry_surface, expiry_rect)
-            # Refresh game screen
-            pygame.display.update()
-            # Refresh rate
-            boost_active = (
-                speed_boost_on_food
-                and speed_boost_active_until > time.time()
-            )
-            if not boost_active and speed_boost_active_until:
-                speed_boost_active_until = 0
-            current_speed = (
-                difficulty + speed_boost_bonus if boost_active else difficulty
-            )
-            fps_controller.tick(current_speed)
-        else:
-            # Paused GFX
-            game_window.fill(bg_color)
-            for pos in snake_body:
-                segment_rect = pygame.Rect(pos[0], pos[1], 10, 10)
-                pygame.draw.rect(game_window, snake_color, segment_rect)
-            food_rect = pygame.Rect(food_pos[0], food_pos[1], 10, 10)
-            paused_food_color = current_food_color.lerp(red, 0.4)
-            pygame.draw.rect(game_window, paused_food_color, food_rect)
-            for wall in walls:
-                pygame.draw.rect(game_window, wall_color, wall)
-            for moving in moving_walls:
-                pygame.draw.rect(game_window, wall_color, moving['rect'])
-            now = time.time()
-            elapsed_time = int(now - start_time)
-            elapsed_minutes = elapsed_time // 60
-            elapsed_seconds = elapsed_time % 60
-            elapsed_str = f'Вр:{elapsed_minutes}:{elapsed_seconds:02d}'
-            if mode == 'map':
-                remaining_seconds = max(0, int(map_end_time - now))
-                if remaining_seconds > 0:
-                    minutes = remaining_seconds // 60
-                    seconds = remaining_seconds % 60
-                    mode_text = f'Премиум{current_premium_minutes}'
-                    countdown = f'До:{minutes}:{seconds:02d}'
-                else:
-                    mode_text = 'Классика'
-                    countdown = ''
-            elif mode == 'survival':
-                mode_text = 'Выживание'
-                countdown = ''
-            elif mode == 'mvp':
-                mode_text = 'Классика'
-                countdown = ''
-            elif mode == 'mvp2':
-                mode_text = ''
-                countdown = ''
-            else:
-                mode_text = ''
-                countdown = ''
-            effects_parts = []
-            if speed_boost_active_until > now:
-                boost_time = int(speed_boost_active_until - now)
-                effects_parts.append(f'Буст:{boost_time}')
-            if invincible_until > now:
-                shield_time = int(invincible_until - now)
-                effects_parts.append(f'Щит:{shield_time}')
-            if food_type != 'normal':
-                food_label = FOOD_LABELS.get(food_type, food_type)
-                effects_parts.append(f'Еда:{food_label}')
-            show_score(
-                1,
                 text_color,
-                'consolas',
-                20,
-                mode_text,
-                countdown,
-                elapsed_str,
-                effects_parts,
+                input_rect.inflate(20, 10),
+                2,
+            )  # Border for input field
+            hint_font = pygame.font.SysFont('times new roman', 20)
+            hint_surface = hint_font.render(
+                'Enter: Подтвердить, Esc: Отмена',
+                True,
+                text_color,
             )
-            # Pause text
-            pause_font = pygame.font.SysFont('times new roman', 50)
-            pause_surface = pause_font.render('ПАУЗА', True, text_color)
-            pause_rect = pause_surface.get_rect()
-            pause_rect.center = (frame_size_x / 2, frame_size_y / 2)
-            game_window.blit(pause_surface, pause_rect)
+            hint_rect = hint_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 + 50)
+            )
+            game_window.blit(hint_surface, hint_rect)
             pygame.display.update()
             fps_controller.tick(10)
-        update_music()
-    elif game_state == 'game_over':
-        game_window.fill(bg_color)
-        game_over_font = pygame.font.SysFont('times new roman', 50)
-        game_over_surface = game_over_font.render('Игра окончена', True, red)
-        game_over_rect = game_over_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 - 50)
-        )
-        game_window.blit(game_over_surface, game_over_rect)
-        score_font = pygame.font.SysFont('times new roman', 30)
-        score_surface = score_font.render(
-            f'Финальный счёт: {score} (Лучший: {best_score})',
-            True,
-            text_color,
-        )
-        score_rect = score_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2)
-        )
-        game_window.blit(score_surface, score_rect)
-        restart_font = pygame.font.SysFont('times new roman', 25)
-        restart_surface = restart_font.render(
-            'Нажмите R для перезапуска или Q для выхода',
-            True,
-            green,
-        )
-        restart_rect = restart_surface.get_rect(
-            center=(frame_size_x / 2, frame_size_y / 2 + 50)
-        )
-        game_window.blit(restart_surface, restart_rect)
-        pygame.display.update()
-        if not played_death and sound_enabled:
-            death_sound.play()
-            played_death = True
-        fps_controller.tick(10)
-        update_music()
+            update_music()
+        elif game_state == 'leaderboard':
+            game_window.fill(bg_color)
+            title_font = pygame.font.SysFont('times new roman', 45)
+            title_surface = title_font.render(
+                'Таблица лидеров', True, text_color
+            )
+            title_rect = title_surface.get_rect(
+                center=(frame_size_x / 2, 50)
+            )
+            game_window.blit(title_surface, title_rect)
+
+            # Get leaderboard data
+            try:
+                top_scores = leaderboard.get_leaderboard(mode=None, limit=10)
+                status_font = pygame.font.SysFont('times new roman', 18)
+                status_text = "🌐 Online" if leaderboard.online else "💾 Offline"
+                status_surface = status_font.render(
+                    status_text, True, green if leaderboard.online else orange
+                )
+                status_rect = status_surface.get_rect()
+                status_rect.topright = (frame_size_x - 20, 20)
+                game_window.blit(status_surface, status_rect)
+            except Exception as e:
+                logging.error(f"Failed to load leaderboard: {e}")
+                top_scores = []
+
+            # Display scores
+            if top_scores:
+                entry_font = pygame.font.SysFont('times new roman', 24)
+                y_offset = 110
+                for i, entry in enumerate(top_scores, 1):
+                    rank = f"{i}."
+                    name = entry.get('name', 'Unknown')[:15]
+                    score_val = entry.get('score', 0)
+                    mode_val = entry.get('mode', 'mvp')
+
+                    # Highlight current player
+                    if name == player_name:
+                        color = gold
+                    else:
+                        color = text_color
+
+                    text = f"{rank:3} {name:15} {score_val:5} [{mode_val}]"
+                    entry_surface = entry_font.render(text, True, color)
+                    entry_rect = entry_surface.get_rect(
+                        center=(frame_size_x / 2, y_offset)
+                    )
+                    game_window.blit(entry_surface, entry_rect)
+                    y_offset += 32
+            else:
+                no_data_font = pygame.font.SysFont('times new roman', 25)
+                no_data_surface = no_data_font.render(
+                    'Нет данных', True, text_color
+                )
+                no_data_rect = no_data_surface.get_rect(
+                    center=(frame_size_x / 2, frame_size_y / 2)
+                )
+                game_window.blit(no_data_surface, no_data_rect)
+
+            # Hint
+            hint_font = pygame.font.SysFont('times new roman', 20)
+            hint_surface = hint_font.render(
+                'ESC: Вернуться в меню', True, text_color
+            )
+            hint_rect = hint_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y - 30)
+            )
+            game_window.blit(hint_surface, hint_rect)
+
+            pygame.display.update()
+            fps_controller.tick(10)
+        elif game_state == 'playing':
+            if premium_offer_active:
+                game_window.fill(bg_color)
+                for pos in snake_body:
+                    segment_rect = pygame.Rect(pos[0], pos[1], 10, 10)
+                    pygame.draw.rect(game_window, snake_color, segment_rect)
+                food_rect = pygame.Rect(food_pos[0], food_pos[1], 10, 10)
+                pygame.draw.rect(game_window, current_food_color, food_rect)
+                for wall_rect in walls:
+                    pygame.draw.rect(game_window, wall_color, wall_rect)
+                for moving in moving_walls:
+                    pygame.draw.rect(game_window, wall_color, moving['rect'])
+
+                update_and_show_game_status()
+
+                prompt_font = pygame.font.SysFont('times new roman', 36)
+                prompt_surface = prompt_font.render(
+                    'Открыть "Премиум5"? (Y — да, N — нет)',
+                    True,
+                    green,
+                )
+                prompt_rect = prompt_surface.get_rect(
+                    center=(frame_size_x / 2, frame_size_y / 2 - 20)
+                )
+                game_window.blit(prompt_surface, prompt_rect)
+                detail_font = pygame.font.SysFont('times new roman', 24)
+                detail_surface = detail_font.render(
+                    'Премиум5: стены, бонусы и музыка на 5 минут.',
+                    True,
+                    text_color,
+                )
+                detail_rect = detail_surface.get_rect(
+                    center=(frame_size_x / 2, frame_size_y / 2 + 20)
+                )
+                game_window.blit(detail_surface, detail_rect)
+                decline_surface = detail_font.render(
+                    'N / пробел / Esc — продолжить классику.',
+                    True,
+                    text_color,
+                )
+                decline_rect = decline_surface.get_rect(
+                    center=(frame_size_x / 2, frame_size_y / 2 + 50)
+                )
+                game_window.blit(decline_surface, decline_rect)
+
+            pygame.display.update()
+            fps_controller.tick(10)
+        elif game_state == 'game_over':
+            game_window.fill(bg_color)
+            game_over_font = pygame.font.SysFont('times new roman', 50)
+            game_over_surface = game_over_font.render('Игра окончена', True, red)
+            game_over_rect = game_over_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 - 50)
+            )
+            game_window.blit(game_over_surface, game_over_rect)
+            score_font = pygame.font.SysFont('times new roman', 30)
+            score_surface = score_font.render(
+                f'Финальный счёт: {score} (Лучший: {best_score})',
+                True,
+                text_color,
+            )
+            score_rect = score_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2)
+            )
+            game_window.blit(score_surface, score_rect)
+            restart_font = pygame.font.SysFont('times new roman', 25)
+            restart_surface = restart_font.render(
+                'Нажмите R для перезапуска или Q для выхода',
+                True,
+                green,
+            )
+            restart_rect = restart_surface.get_rect(
+                center=(frame_size_x / 2, frame_size_y / 2 + 50)
+            )
+            game_window.blit(restart_surface, restart_rect)
+            pygame.display.update()
+            if not played_death and sound_enabled:
+                death_sound.play()
+                played_death = True
+            fps_controller.tick(10)
+            update_music()
+
+
+def choose_food_type():
+    """Chooses the type of food to spawn based on game mode and state."""
+    if mode == 'mvp2':
+        return 'normal'
+    if speed_boost_on_food:
+        return 'speed'
+    if mode == 'mvp':
+        return 'normal'
+
+    config = MODE_FOOD_CONFIG.get(mode, MODE_FOOD_CONFIG['mvp'])
+    
+    # Calculate probabilities
+    bonus_prob = min(config['bonus']['cap'], config['bonus']['base'] + (level * config['bonus']['level']) + (score * config['bonus']['score']))
+    shield_prob = min(config['shield']['cap'], config['shield']['base'] + (level * config['shield']['level']) + (score * config['shield']['score']))
+    speed_prob = min(config['speed']['cap'], config['speed']['base'] + (level * config['speed']['level']) + (score * config['speed']['score']))
+
+    total_special_prob = min(config['max_total'], bonus_prob + shield_prob + speed_prob)
+    
+    rand_val = rng.random()
+
+    if rand_val < bonus_prob:
+        return 'bonus'
+    elif rand_val < bonus_prob + shield_prob:
+        return 'shield'
+    elif rand_val < bonus_prob + shield_prob + speed_prob:
+        return 'speed'
+    else:
+        return 'normal'
+
+
+def spawn_food(force_type=None):
+    """Spawns food on the screen."""
+    global food_pos, food_type, current_food_color, current_food_value, current_food_effect
+    
+    selected_type = force_type or choose_food_type()
+    
+    food_config = FOOD_TYPE_CONFIG[selected_type]
+    food_type = selected_type
+    current_food_color = food_config['color']
+    current_food_value = food_config['score']
+    current_food_effect = food_config['effect']
+
+    while True:
+        food_pos = [rng.randrange(1, (frame_size_x//10)) * 10, rng.randrange(1, (frame_size_y//10)) * 10]
+        if food_pos not in snake_body and food_pos not in [wall.topleft for wall in walls] and food_pos not in [moving['rect'].topleft for moving in moving_walls]:
+            break
+
+
+def load_level(level_num):
+    """Loads the specified level."""
+    global walls, moving_walls, wrap_edges
+    walls.clear()
+    moving_walls.clear()
+    wrap_edges = False
+
+    if mode == 'map':
+        wrap_edges = True
+        # Simple wall pattern for any level > 0 in map mode
+        if level_num > 0:
+            for i in range(5, (frame_size_x // 10) - 5):
+                walls.append(pygame.Rect(i * 10, frame_size_y // 2, 10, 10))
+    elif mode == 'survival':
+        pass # No walls in survival

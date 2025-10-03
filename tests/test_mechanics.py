@@ -8,7 +8,7 @@ os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
 os.environ['SNAKE_GAME_SKIP_LOOP'] = '1'
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODULE_PATH = PROJECT_ROOT / 'Snake Game.py'
+MODULE_PATH = PROJECT_ROOT / 'snake_game.py'
 SPEC = importlib.util.spec_from_file_location('snake_game', MODULE_PATH)
 snake_game = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(snake_game)
