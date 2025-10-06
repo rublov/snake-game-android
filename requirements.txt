@@ -1,5 +1,5 @@
 # Runtime dependencies
-kivy==2.2.1
+kivy==2.3.1
 pyjnius
 requests>=2.32.0
 
