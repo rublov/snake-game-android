@@ -1,3 +1,68 @@
+name: Build Android APK (Docker)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Free disk space (workaround for p4a)
+        run: |
+          sudo rm -rf /opt/hostedtoolcache
+          sudo rm -rf /usr/local/lib/android
+          df -h
+
+      - name: Build Docker image
+        run: |
+          docker build -f Dockerfile.production -t snakegame-builder .
+
+      - name: Build APK in container
+        run: |
+          docker run --rm \
+            -e CLEAN_BUILD=1 \
+            -v "$PWD:/app" \
+            --name snakegame-build \
+            snakegame-builder
+
+      - name: List artifacts
+        run: |
+          ls -lah bin || true
+          ls -lah . || true
+
+      - name: Upload APK artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snake-apk
+          path: |
+            bin/*.apk
+          if-no-files-found: error
+
+      - name: Upload build logs (if exist)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            buildozer_full.log
+            .buildozer/android/platform/build/outputs/**
+          if-no-files-found: ignore
+
 name: Build Android APK
 
 on:
